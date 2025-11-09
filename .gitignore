@@ -1,0 +1,31 @@
+# Audio files directory
+audios/
+
+# Chunked text files
+chunks/
+
+# JSON output files
+json_output/
+
+# Video files
+Videos/
+
+# Transcript files
+transcripts/
+
+# Python virtual environment
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
