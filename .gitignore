@@ -34,3 +34,13 @@ __pycache__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Embeddings and vector index files (do not track large artifact files)
+embeddings.npy
+embeddings.parquet
+vector_index.faiss
+# catch common variations/names
+*.faiss
+*.index
+*.npy
+*.parquet
