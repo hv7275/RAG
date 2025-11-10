@@ -1,5 +1,17 @@
-whisper-openai>=20231106
-requests>=2.31.0
-pandas>=2.1.0
-numpy>=1.24.0
-faiss-cpu>=1.7.4  # Use faiss-gpu for GPU support
+# Core
+openai-whisper>=20230315    # Whisper (openai-whisper) for transcription
+requests>=2.31.0            # HTTP client for embedding service calls
+pandas>=1.5.0               # metadata handling
+numpy>=1.24.0               # numeric arrays
+
+# Lexical / retrieval
+scikit-learn>=1.2.0         # TF-IDF and similarity utilities
+
+# Vector index
+# On most systems use faiss-cpu; on GPU machines install faiss-gpu (requires matching CUDA).
+# Note: faiss wheels for Windows are not always available via pip; consider platform-specific install.
+faiss-cpu>=1.7.4
+
+# Optional (dev / convenience)
+tqdm>=4.65.0                # progress bars (used in longer runs)
+python-dotenv>=1.0.0        # optional: load EMBED_URL from .env
