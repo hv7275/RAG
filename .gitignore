@@ -1,17 +1,22 @@
-# Audio files directory
-audios/
+# Audio files - keep folder, ignore contents
+audios/*
+!audios/.gitkeep
 
-# Chunked text files
-chunks/
+# Chunked text files - keep folder, ignore contents
+chunks/*
+!chunks/.gitkeep
 
-# JSON output files
-json_output/
+# JSON output files - keep folder, ignore contents
+json_output/*
+!json_output/.gitkeep
 
-# Video files
-Videos/
+# Video files - keep folder, ignore contents
+Videos/*
+!Videos/.gitkeep
 
-# Transcript files
-transcripts/
+# Transcript files - keep folder, ignore contents
+transcripts/*
+!transcripts/.gitkeep
 
 # Python virtual environment
 venv/
