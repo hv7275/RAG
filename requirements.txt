@@ -1,8 +1,9 @@
-# Core
-openai-whisper>=20230315    # Whisper (openai-whisper) for transcription
-requests>=2.31.0            # HTTP client for embedding service calls
+requests>=2.31.0            # HTTP client for embedding & generation service calls
 pandas>=1.5.0               # metadata handling
 numpy>=1.24.0               # numeric arrays
+
+# Transcription (Whisper)
+openai-whisper>=20230315    # or `whisper` depending on installation method
 
 # Lexical / retrieval
 scikit-learn>=1.2.0         # TF-IDF and similarity utilities
@@ -12,6 +13,9 @@ scikit-learn>=1.2.0         # TF-IDF and similarity utilities
 # Note: faiss wheels for Windows are not always available via pip; consider platform-specific install.
 faiss-cpu>=1.7.4
 
-# Optional (dev / convenience)
-tqdm>=4.65.0                # progress bars (used in longer runs)
-python-dotenv>=1.0.0        # optional: load EMBED_URL from .env
+# Optional / optional features (install if you need them)
+python-dotenv>=1.0.0        # load .env configuration
+tqdm>=4.65.0                # progress bars
+sentence-transformers>=2.2.0  # optional: CrossEncoder reranker (cpu)
+transformers>=4.30.0        # optional: HF generation backend
+tiktoken>=0.4.0             # optional: token counting

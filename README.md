@@ -1,3 +1,74 @@
+# RAG — Video/Audio → Retrieval-Augmented Generation
+
+Small, local pipeline to convert video/audio into searchable, timestamped text chunks and run retrieval + generation locally.
+
+Key scripts
+
+- `speech_to_text.py` — transcribe audio files (Whisper) into `transcripts/` (TSV with start/end/text).
+- `chunks_with_timestamp.py` — group transcript segments into human-readable chunk `.txt` files in `chunks/`.
+- `chunk_to_json.py` — convert transcripts / chunks into structured JSON files in `json_output/` (used for embedding).
+- `read_chunks.py` — library of functions: load JSON, clean & chunk text, call embedding service, build FAISS index, hybrid search, and answer generation helpers.
+- `incomings.py` — CLI entrypoint that orchestrates the pipeline (build or load artifacts, run retrieval, optional generation).
+
+Configuration (.env)
+
+- Project reads runtime configuration from a `.env` file at the repo root (optional). Example keys:
+  - `EMBED_URL` — embedding endpoint (e.g. `http://127.0.0.1:11434/api/embed`).
+  - `EMBED_MODEL` — default embed model name/tag (e.g. `nomic-embed-text:latest` or `mxbai-embed-large:latest`).
+  - `OLLAMA_URL` — generation endpoint (e.g. `http://127.0.0.1:11434/api/chat` or `/api/generate`).
+  - `GEN_MODEL` — generator model name/tag (e.g. `llama3.2:3b`).
+  - `JSON_DIR`, `OUT_PARQUET`, `OUT_NPY`, `OUT_FAISS`, and chunking/timeout settings — see `.env` in repo for defaults.
+
+Quick start
+
+1. Create a virtual environment and install dependencies:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+2. Optionally edit `.env` to match your local servers and preferred models.
+
+3. Put audio files into `audios/` and run the transcript step:
+
+```powershell
+python speech_to_text.py
+```
+
+4. Produce structured JSON (used for embedding):
+
+```powershell
+python chunk_to_json.py
+```
+
+5. Build embeddings and index (or run directly via the CLI):
+
+```powershell
+python incomings.py --query "What is this video about?" --answer
+```
+
+Notes
+
+- `incomings.py` is the recommended entrypoint. It will rebuild artifacts when needed or load existing ones (`embeddings.parquet`, `embeddings.npy`, `vector_index.faiss`).
+- `read_chunks.py` contains reusable functions and now acts as a library (importable).
+- The code tries common generation endpoints (`/api/chat`, `/api/generate`, etc.) and multiple payload shapes to be tolerant of different local servers. If generation fails with a 500, check your `OLLAMA_URL` and `GEN_MODEL` values.
+
+Troubleshooting
+
+- 404 when calling generation: verify `OLLAMA_URL` is correct and includes the path your local server expects (`/api/chat` vs `/api/generate`).
+- 500 from generation: often means the model name is not available or the server failed to run the model — confirm your local model is installed and the `GEN_MODEL` matches.
+- Embedding errors: ensure `EMBED_URL` points to a working embedding server and that `EMBED_MODEL` is available.
+
+Where to go next
+
+- Add `--check-servers` to proactively probe endpoints and show which candidate endpoint/payload works (I can add this for you).
+- Add unit tests that mock the embedding/generation endpoints.
+
+License
+MIT
+
 # Video to RAG System
 
 This project implements a Retrieval-Augmented Generation (RAG) system that processes video/audio content into searchable chunks with semantic search capabilities. It converts speech to text, segments the transcripts, and creates embeddings for efficient retrieval.
