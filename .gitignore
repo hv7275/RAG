@@ -44,3 +44,5 @@ vector_index.faiss
 *.index
 *.npy
 *.parquet
+*.joblib
+*.env
