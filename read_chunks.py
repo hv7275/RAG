@@ -239,15 +239,26 @@ def search_index(index: faiss.Index, q: np.ndarray, k: int):
 # Prompt + Generation
 # ==================
 def build_prompt(query: str, contexts: List[Dict[str, Any]], limit: int = 4000):
-    intro = "Answer using ONLY the provided transcript excerpts. Cite using [chunk_id]."
+    intro = "Answer the question using ONLY the information from the provided transcript excerpts. Provide a clear, direct answer without including chunk IDs, prefixes, or phrases like 'I would suggest' or 'the following answer'. Just provide the answer directly."
     parts = []
     used = 0
+    intro_len = len(intro) + len(f"\n\nQuestion: {query}\n\nContext:\n") + len("\n\nAnswer:")
+    available = limit - intro_len - 200  # Reserve some space
+    
     for c in contexts:
         block = f"[chunk_id={c['chunk_id']}]\n{c['chunk']}\n"
-        if used + len(block) > limit and parts:
+        if used + len(block) > available and parts:
             break
         parts.append(block)
         used += len(block)
+    
+    if not parts:
+        # If no context fits, use at least the first chunk truncated
+        if contexts:
+            first_chunk = contexts[0]['chunk']
+            truncated = first_chunk[:available-100] + "..."
+            parts.append(f"[chunk_id={contexts[0]['chunk_id']}]\n{truncated}\n")
+    
     return f"{intro}\n\nQuestion: {query}\n\nContext:\n" + "\n---\n".join(parts) + "\n\nAnswer:"
 
 def _normalize_base_url(url: str) -> str:
@@ -379,7 +390,7 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
     }
 
     try:
-        r = requests.post(chat_url, json=chat_payload, timeout=120)
+        r = requests.post(chat_url, json=chat_payload, timeout=180)
         r.raise_for_status()
         data = r.json()
         if isinstance(data, dict):
@@ -393,7 +404,8 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
     except requests.exceptions.HTTPError as e:
         status = getattr(e.response, "status_code", None)
         body = e.response.text if getattr(e, "response", None) is not None else ""
-        print(f"[INFO] /api/chat failed, falling back to /api/generate")
+        error_msg = f"HTTP {status} error from /api/chat: {body[:500]}"
+        print(f"[INFO] /api/chat failed with status {status}, falling back to /api/generate")
         print(f"[DEBUG] Chat error response:\n {body}\n")
 
         if status == 500:
@@ -404,35 +416,96 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
                 "options": options,
             }
             try:
-                r2 = requests.post(gen_url, json=gen_payload, timeout=120)
+                # Try with the model, but if prompt is too long, truncate it
+                prompt_to_send = prompt
+                max_prompt_chars = GEN_NUM_CTX * 3  # Rough estimate: 3 chars per token
+                if len(prompt_to_send) > max_prompt_chars:
+                    print(f"[WARN] Prompt too long ({len(prompt_to_send)} chars), truncating to {max_prompt_chars} chars")
+                    prompt_to_send = prompt_to_send[:max_prompt_chars] + "\n\n[Prompt truncated due to length]"
+                    gen_payload["prompt"] = prompt_to_send
+                
+                # Use longer timeout for first request (model loading)
+                r2 = requests.post(gen_url, json=gen_payload, timeout=180)
                 print(f"[DEBUG] /api/generate status: {r2.status_code}")
-                print(f"[DEBUG] /api/generate raw response:\n {r2.text}\n")
-                r2.raise_for_status()
+                
+                # Check status before raising
+                if r2.status_code != 200:
+                    error_body = r2.text[:1000] if r2.text else "No error body"
+                    print(f"[DEBUG] /api/generate error response: {error_body}")
+                    
+                    # Try to parse error for more details
+                    try:
+                        error_json = r2.json()
+                        if "error" in error_json:
+                            error_body = error_json["error"]
+                    except:
+                        pass
+                    
+                    # Raise with detailed error
+                    raise requests.exceptions.HTTPError(
+                        f"HTTP {r2.status_code}: {error_body}",
+                        response=r2
+                    )
+                
+                print(f"[DEBUG] /api/generate raw response length: {len(r2.text)} chars")
                 data2 = r2.json()
-                return (data2.get("response") or "").strip()
+                response_text = data2.get("response") or ""
+                if not response_text and "error" in data2:
+                    raise RuntimeError(f"Ollama returned error: {data2['error']}")
+                return response_text.strip()
             except requests.exceptions.HTTPError as e2:
-                # If the backend reports OOM/VRAM errors, try CPU retry then auto-fallback to smaller chat models.
+                # Get detailed error information
+                status2 = getattr(e2.response, "status_code", None)
                 body2 = e2.response.text if getattr(e2, "response", None) is not None else ""
+                error_msg2 = f"HTTP {status2} error from /api/generate: {body2[:500]}"
+                print(f"[ERROR] {error_msg2}")
+                
+                # For 500 errors, try CPU mode first (often fixes memory/VRAM issues)
+                if status2 == 500:
+                    print("[INFO] Attempting CPU fallback (gpu_layers=0)...")
+                    try:
+                        # Ensure options dict exists and set gpu_layers=0
+                        if "options" not in gen_payload:
+                            gen_payload["options"] = {}
+                        gen_payload["options"]["gpu_layers"] = 0
+                        # Also reduce context if it's very large
+                        if gen_payload["options"].get("num_ctx", GEN_NUM_CTX) > 1024:
+                            gen_payload["options"]["num_ctx"] = 1024
+                            print("[INFO] Reduced context window to 1024 for CPU mode")
+                        
+                        r2b = requests.post(gen_url, json=gen_payload, timeout=180)
+                        print(f"[DEBUG] /api/generate (cpu retry) status: {r2b.status_code}")
+                        if r2b.status_code == 200:
+                            data2b = r2b.json()
+                            response_text = data2b.get("response") or ""
+                            if response_text:
+                                print("[SUCCESS] CPU fallback succeeded")
+                                return response_text.strip()
+                        else:
+                            print(f"[DEBUG] /api/generate (cpu retry) error: {r2b.text[:500]}")
+                    except requests.exceptions.Timeout as timeout_error:
+                        print(f"[WARN] CPU fallback timed out: {timeout_error}")
+                    except Exception as cpu_error:
+                        print(f"[WARN] CPU fallback also failed: {cpu_error}")
+                
+                # If the backend reports OOM/VRAM errors, try CPU retry then auto-fallback to smaller chat models.
                 all_body = (body or "") + (body2 or "")
-                oom_hint = "requires more system memory" in all_body or "not enough memory" in all_body
-                if oom_hint:
+                oom_hint = "requires more system memory" in all_body.lower() or "not enough memory" in all_body.lower() or status2 == 500
+                if oom_hint and status2 != 500:  # Skip if we already tried CPU above
                     print("[WARN] Model appears too large for available memory/VRAM.")
                     # First attempt: force CPU by setting gpu_layers=0, retry same model
                     try:
-                        orig_gpu_layers = gen_payload["options"].get("gpu_layers")
+                        if "options" not in gen_payload:
+                            gen_payload["options"] = {}
                         gen_payload["options"]["gpu_layers"] = 0
-                    except Exception:
-                        gen_payload["options"] = dict(gen_payload.get("options") or {})
-                        gen_payload["options"]["gpu_layers"] = 0
-                    try:
                         print("[INFO] Retrying with same model on CPU (gpu_layers=0)...")
-                        r2b = requests.post(gen_url, json=gen_payload, timeout=120)
+                        r2b = requests.post(gen_url, json=gen_payload, timeout=180)
                         print(f"[DEBUG] /api/generate (cpu retry) status: {r2b.status_code}")
-                        print(f"[DEBUG] /api/generate (cpu retry) raw response:\n {r2b.text}\n")
-                        r2b.raise_for_status()
-                        data2b = r2b.json()
-                        return (data2b.get("response") or "").strip()
-                    except requests.exceptions.HTTPError:
+                        if r2b.status_code == 200:
+                            data2b = r2b.json()
+                            return (data2b.get("response") or "").strip()
+                    except (requests.exceptions.HTTPError, requests.exceptions.Timeout) as retry_error:
+                        print(f"[WARN] CPU retry failed: {retry_error}")
                         pass
 
                     # Second attempt: iterate through smallest chat-capable models
@@ -450,7 +523,7 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
                             try:
                                 print(f"[INFO] Retrying with smaller model: '{fallback}'")
                                 gen_payload["model"] = fallback
-                                r3 = requests.post(gen_url, json=gen_payload, timeout=120)
+                                r3 = requests.post(gen_url, json=gen_payload, timeout=180)
                                 print(f"[DEBUG] /api/generate (fallback) status: {r3.status_code}")
                                 print(f"[DEBUG] /api/generate (fallback) raw response:\n {r3.text}\n")
                                 r3.raise_for_status()
@@ -467,18 +540,76 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
                     print("Tips:")
                     print(" - Pull a smaller chat model, e.g.:  ollama pull llama3.2:1b  (or qwen2.5:1.5b)")
                     print(" - Or force CPU by setting environment variable GEN_GPU_LAYERS=0")
-                # If not OOM-related or all fallbacks failed, re-raise the original error for visibility
-                raise
+                # If not OOM-related or all fallbacks failed, raise with detailed error
+                raise RuntimeError(f"Failed to generate answer. {error_msg2}") from e2
 
-        # Non-500 errors → re-raise for visibility
-        raise
+        # Non-500 errors → re-raise for visibility with better error message
+        raise RuntimeError(f"Failed to generate answer. {error_msg}") from e
 
+    except requests.exceptions.Timeout as e:
+        raise RuntimeError(f"Request to Ollama timed out. The model may be taking too long to respond. Try using a smaller model or reducing the prompt length. Details: {str(e)}") from e
     except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Failed to reach Ollama at {base}. Is it running? Details: {e}") from e
+        error_detail = str(e)
+        if "Connection" in error_detail:
+            raise RuntimeError(f"Failed to connect to Ollama at {base}. Is Ollama running? Please start Ollama and try again. Details: {error_detail}") from e
+        else:
+            raise RuntimeError(f"Request to Ollama failed: {error_detail}") from e
+
+def clean_answer(answer: str) -> str:
+    """
+    Clean the answer by removing unwanted prefixes and chunk ID references.
+    """
+    if not answer:
+        return answer
+    
+    # Remove leading/trailing whitespace
+    answer = answer.strip()
+    
+    # Remove common unwanted prefixes (case-insensitive)
+    unwanted_prefixes = [
+        r"\[chunk_id=\d+\]\s*",  # [chunk_id=1] at start
+        r"i would suggest the following answer:\s*",
+        r"i would suggest:\s*",
+        r"the following answer:\s*",
+        r"here is the answer:\s*",
+        r"answer:\s*",
+        r"based on the context[,\s]*",
+        r"according to the context[,\s]*",
+    ]
+    
+    for pattern in unwanted_prefixes:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE)
+    
+    # Remove any remaining [chunk_id=X] references anywhere in the text
+    answer = re.sub(r"\[chunk_id=\d+\]\s*", "", answer, flags=re.IGNORECASE)
+    
+    # Clean up extra whitespace and newlines
+    answer = re.sub(r"\s+", " ", answer)
+    answer = re.sub(r"\n\s*\n", "\n", answer)  # Remove multiple newlines
+    answer = answer.strip()
+    
+    return answer
 
 def generate_answer(query: str, df: pd.DataFrame, hits: List[int], max_ctx: int = 4000,
                     gen_model: str = DEFAULT_GEN_MODEL, ollama_url: str = DEFAULT_OLLAMA_URL):
     # Build the context rows *as dicts*; this fixes the 'string indices' TypeError
     ctx = [{"chunk_id": int(df.iloc[i]["chunk_id"]), "chunk": df.iloc[i]["chunk"]} for i in hits]
     prompt = build_prompt(query, ctx, max_ctx)
-    return answer_via_ollama(prompt, ollama_url, gen_model)
+    
+    # Check prompt length and warn if too long
+    if len(prompt) > max_ctx * 4:  # Rough estimate: 4 chars per token
+        print(f"[WARN] Prompt is very long ({len(prompt)} chars), may cause issues")
+    
+    try:
+        answer = answer_via_ollama(prompt, ollama_url, gen_model)
+        # Clean the answer to remove unwanted prefixes and chunk IDs
+        return clean_answer(answer)
+    except Exception as e:
+        # Re-raise with more context
+        error_msg = str(e)
+        if "Failed to connect" in error_msg or "Is Ollama running" in error_msg:
+            raise RuntimeError(f"Ollama connection error: {error_msg}. Please ensure Ollama is running at {ollama_url}") from e
+        elif "HTTP 500" in error_msg or "Internal Server Error" in error_msg:
+            raise RuntimeError(f"Ollama server error: {error_msg}. The model '{gen_model}' may be having issues. Try a different model or check Ollama logs.") from e
+        else:
+            raise RuntimeError(f"Answer generation failed: {error_msg}") from e

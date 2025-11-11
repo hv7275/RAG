@@ -19,3 +19,18 @@ tqdm>=4.65.0                # progress bars
 sentence-transformers>=2.2.0  # optional: CrossEncoder reranker (cpu)
 transformers>=4.30.0        # optional: HF generation backend
 tiktoken>=0.4.0             # optional: token counting
+
+# Web framework
+flask>=3.0.0                # Flask frontend UI
+fastapi>=0.104.0            # FastAPI backend API
+uvicorn[standard]>=0.24.0   # ASGI server for FastAPI
+pydantic>=2.0.0             # Data validation for FastAPI
+pydantic[email]>=2.0.0      # Email validation for FastAPI
+
+# Database
+sqlalchemy>=2.0.0           # SQL toolkit and ORM
+
+# Authentication
+python-jose[cryptography]>=3.3.0  # JWT token handling
+bcrypt>=4.0.0               # Password hashing (direct bcrypt, more reliable than passlib)
+python-multipart>=0.0.6     # Form data parsing

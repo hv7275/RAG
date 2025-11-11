@@ -1,454 +1,587 @@
-# RAG — Video/Audio → Retrieval-Augmented Generation
+# RAG System - Video/Audio Retrieval-Augmented Generation
 
-Small, local pipeline to convert video/audio into searchable, timestamped text chunks and run retrieval + generation locally.
+A comprehensive RAG (Retrieval-Augmented Generation) system that processes video/audio content into searchable chunks with semantic search capabilities. The system includes a modern web UI with user authentication, chat history, and real-time query processing.
 
-Key scripts
+## 🚀 Features
 
-- `speech_to_text.py` — transcribe audio files (Whisper) into `transcripts/` (TSV with start/end/text).
-- `chunks_with_timestamp.py` — group transcript segments into human-readable chunk `.txt` files in `chunks/`.
-- `chunk_to_json.py` — convert transcripts / chunks into structured JSON files in `json_output/` (used for embedding).
-- `read_chunks.py` — library of functions: load JSON, clean & chunk text, call embedding service, build FAISS index, hybrid search, and answer generation helpers.
-- `incomings.py` — CLI entrypoint that orchestrates the pipeline (build or load artifacts, run retrieval, optional generation).
+### Core RAG Capabilities
+- **Speech-to-Text Conversion**: Uses OpenAI's Whisper model for accurate transcription
+- **Timestamp Preservation**: Maintains timing information for each segment
+- **Intelligent Chunking**: Splits transcripts into manageable segments with context
+- **Hybrid Search**: Combines semantic embeddings (FAISS) and lexical search (TF-IDF)
+- **Answer Generation**: Uses Ollama LLM for generating answers from retrieved chunks
+- **Vector Indexing**: Fast similarity search using FAISS
 
-Configuration (.env)
+### Web Interface
+- **Modern UI**: Beautiful, responsive web interface built with Flask
+- **Real-time Status**: Live status checking for system health
+- **Interactive Queries**: Easy-to-use query interface with configurable parameters
+- **Copy to Clipboard**: Copy answers and chunks with one click
+- **Error Handling**: Comprehensive error messages and user feedback
 
-- Project reads runtime configuration from a `.env` file at the repo root (optional). Example keys:
-  - `EMBED_URL` — embedding endpoint (e.g. `http://127.0.0.1:11434/api/embed`).
-  - `EMBED_MODEL` — default embed model name/tag (e.g. `nomic-embed-text:latest` or `mxbai-embed-large:latest`).
-  - `OLLAMA_URL` — generation endpoint (e.g. `http://127.0.0.1:11434/api/chat` or `/api/generate`).
-  - `GEN_MODEL` — generator model name/tag (e.g. `llama3.2:3b`).
-  - `JSON_DIR`, `OUT_PARQUET`, `OUT_NPY`, `OUT_FAISS`, and chunking/timeout settings — see `.env` in repo for defaults.
+### Authentication & Database
+- **User Authentication**: JWT-based authentication system
+- **User Registration & Login**: Secure user management
+- **Chat History**: Automatically saves and retrieves user query history
+- **Password Security**: Bcrypt password hashing
+- **Session Management**: Secure session handling
 
-Quick start
+## 📋 Table of Contents
 
-1. Create a virtual environment and install dependencies:
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Configuration](#configuration)
+- [Authentication](#authentication)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
+## 🏗️ Architecture
 
-2. Optionally edit `.env` to match your local servers and preferred models.
+The system consists of three main components:
 
-3. Put audio files into `audios/` and run the transcript step:
+### 1. FastAPI Backend (`api.py`)
+- RESTful API for RAG operations
+- User authentication and authorization
+- Database operations (users, chat history)
+- Embedding and indexing management
+- Query processing and answer generation
 
-```powershell
-python speech_to_text.py
-```
+### 2. Flask Frontend (`app.py`)
+- Web UI server
+- Authentication routes
+- API proxy for frontend
+- Session management
 
-4. Produce structured JSON (used for embedding):
+### 3. Core RAG Library (`read_chunks.py`)
+- Embedding generation
+- FAISS index management
+- Hybrid search implementation
+- Answer generation via Ollama
 
-```powershell
-python chunk_to_json.py
-```
-
-5. Build embeddings and index (or run directly via the CLI):
-
-```powershell
-python incomings.py --query "What is this video about?" --answer
-```
-
-Notes
-
-- `incomings.py` is the recommended entrypoint. It will rebuild artifacts when needed or load existing ones (`embeddings.parquet`, `embeddings.npy`, `vector_index.faiss`).
-- `read_chunks.py` contains reusable functions and now acts as a library (importable).
-- The code tries common generation endpoints (`/api/chat`, `/api/generate`, etc.) and multiple payload shapes to be tolerant of different local servers. If generation fails with a 500, check your `OLLAMA_URL` and `GEN_MODEL` values.
-
-Troubleshooting
-
-- 404 when calling generation: verify `OLLAMA_URL` is correct and includes the path your local server expects (`/api/chat` vs `/api/generate`).
-- 500 from generation: often means the model name is not available or the server failed to run the model — confirm your local model is installed and the `GEN_MODEL` matches.
-- Embedding errors: ensure `EMBED_URL` points to a working embedding server and that `EMBED_MODEL` is available.
-
-Where to go next
-
-- Add `--check-servers` to proactively probe endpoints and show which candidate endpoint/payload works (I can add this for you).
-- Add unit tests that mock the embedding/generation endpoints.
-
-License
-MIT
-
-# Video to RAG System
-
-This project implements a Retrieval-Augmented Generation (RAG) system that processes video/audio content into searchable chunks with semantic search capabilities. It converts speech to text, segments the transcripts, and creates embeddings for efficient retrieval.
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 RAG/
-├── audios/              # Store input audio files
-├── chunks/              # Timestamped text chunks
-├── json_output/         # JSON formatted transcripts
-├── transcripts/         # Raw transcripts with timestamps
-├── Videos/             # Source video files
-├── speech_to_text.py   # Convert audio to text using Whisper
-├── chunks_with_timestamp.py # Segment transcripts into chunks
-├── chunk_to_json.py    # Convert chunks to JSON format
-├── read_chunks.py      # Create embeddings and semantic search
-└── process_video.py    # Single file video processing
+├── api.py                  # FastAPI backend server
+├── app.py                  # Flask frontend server
+├── auth.py                 # Authentication utilities
+├── database.py             # Database models and configuration
+├── read_chunks.py          # Core RAG library
+├── run_api.py              # FastAPI server runner
+├── run_app.py              # Flask server runner
+├── setup_database.py       # Database initialization script
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment configuration (create this)
+│
+├── audios/                 # Input audio files
+├── chunks/                 # Text chunks with timestamps
+├── json_output/            # JSON formatted transcripts
+├── transcripts/            # Raw transcripts (TSV format)
+├── Videos/                 # Source video files
+│
+├── templates/              # HTML templates
+│   └── index.html          # Main UI page
+├── static/                 # Static files
+│   ├── css/
+│   │   └── style.css       # UI styles
+│   └── js/
+│       └── app.js          # Frontend JavaScript
+│
+├── rag_system.db           # SQLite database (auto-created)
+├── embeddings.parquet      # Embeddings metadata
+├── embeddings.npy          # Embedding vectors
+└── vector_index.faiss      # FAISS index
 ```
 
-## Features
+## 🔧 Installation
 
-- **Speech-to-Text Conversion**: Uses OpenAI's Whisper model for accurate transcription
-- **Timestamp Preservation**: Maintains timing information for each segment
-- **Chunking System**: Splits transcripts into manageable segments (default: 5 segments per chunk)
-- **Vector Search**: Implements FAISS for efficient similarity search
-- **Embeddings**: Uses BGE-M3 model for generating embeddings
-- **Structured Output**: Saves data in multiple formats (TSV, JSON, FAISS index)
+### Prerequisites
 
-## Prerequisites
+- Python 3.8 or higher
+- Ollama installed and running (for embeddings and generation)
+- Git (optional)
+
+### Step 1: Clone the Repository
+
+```bash
+git clone <repository-url>
+cd RAG
+```
+
+### Step 2: Create Virtual Environment
+
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# Linux/Mac
+python -m venv venv
+source venv/bin/activate
+```
+
+### Step 3: Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Required packages:
+### Step 4: Set Up Ollama
 
-- whisper
-- requests
-- pandas
-- numpy
+1. Install Ollama from [https://ollama.ai](https://ollama.ai)
+2. Start Ollama service
+3. Pull required models:
+   ```bash
+   ollama pull nomic-embed-text
+   ollama pull llama3.2:3b
+   ```
 
-# Video → RAG (Retrieval-Augmented Generation)
+### Step 5: Configure Environment
 
-This repository is a lightweight pipeline that converts audio/video into searchable text chunks and provides a hybrid semantic+lexical retrieval layer (embeddings + TF‑IDF + FAISS).
+Create a `.env` file in the project root:
 
-This README has exact commands for the scripts included in this project and notes about configuration, `.gitignore` behavior, and the local embedding service used by `read_chunks.py`.
+```env
+# Ollama Configuration
+EMBED_URL=http://127.0.0.1:11434/api/embed
+EMBED_MODEL=nomic-embed-text:latest
+OLLAMA_URL=http://127.0.0.1:11434
+GEN_MODEL=llama3.2:3b
 
-## What this repo contains
+# Database
+DATABASE_URL=sqlite:///./rag_system.db
 
-Relevant scripts and folders:
+# Security (change these in production!)
+SECRET_KEY=your-secret-key-change-this-in-production
+FLASK_SECRET_KEY=your-flask-secret-key-change-this-in-production
 
-- `audios/` — drop your audio files here (folder tracked, contents ignored by `.gitignore`)
-- `transcripts/` — per-audio `.tsv` transcripts with timestamps (folder tracked, contents ignored)
-- `chunks/` — human-readable chunk `.txt` files (folder tracked, contents ignored)
-- `json_output/` — structured JSON per video (folder tracked, contents ignored)
-- `Videos/` — (optional) original video files (folder tracked, contents ignored)
-- `speech_to_text.py` — runs Whisper over `audios/` and writes `transcripts/*.tsv`
-- `chunks_with_timestamp.py` — groups transcript segments into timestamped chunk files in `chunks/`
-- `chunk_to_json.py` — converts transcripts (`.tsv`) into `json_output/*.json` with `full_text` + `chunks`
-- `read_chunks.py` — loads `json_output`, requests embeddings from a local embedding service, builds FAISS, and provides a hybrid search function
-- `process_video.py` — tiny example to transcribe a single file
-
-## Quick start — full pipeline
-
-1. Install dependencies (see `requirements.txt`):
-
-```powershell
-python -m pip install -r requirements.txt
+# API Configuration
+API_URL=http://localhost:8000
 ```
 
-2. Put audio files in `audios/` (supported formats: `.mp3`, `.wav`, `.m4a`).
+### Step 6: Initialize Database
 
-3. Generate transcripts (Whisper):
+```bash
+python setup_database.py
+```
 
-```powershell
+Or the database will be automatically created when you start the API server.
+
+## 🚀 Quick Start
+
+### 1. Prepare Your Audio/Video Files
+
+Place your audio files in the `audios/` directory:
+- Supported formats: `.mp3`, `.wav`, `.m4a`, `.mp4`
+
+### 2. Generate Transcripts
+
+```bash
 python speech_to_text.py
 ```
 
-This will write TSV files into `transcripts/` with lines formatted as: `start\tend\ttext`.
+This creates TSV files in `transcripts/` with timestamps.
 
-4. (Option A) Create plain text chunks (one `.txt` per chunk):
+### 3. Convert to JSON Format
 
-```powershell
-python chunks_with_timestamp.py
-```
-
-5. (Option B) Convert transcripts into structured JSON (used by `read_chunks.py`):
-
-```powershell
+```bash
 python chunk_to_json.py
 ```
 
-6. Build embeddings and FAISS index, then run an example hybrid search:
+This creates JSON files in `json_output/` for embedding.
 
-```powershell
-python read_chunks.py
+### 4. Build Embeddings and Index
+
+The system will automatically build embeddings when you start the API, or you can trigger it manually via the UI's "Rebuild Index" button.
+
+### 5. Start the Servers
+
+**Terminal 1 - FastAPI Backend:**
+```bash
+python run_api.py
+```
+API will be available at `http://localhost:8000`
+
+**Terminal 2 - Flask Frontend:**
+```bash
+python run_app.py
+```
+UI will be available at `http://localhost:5000`
+
+### 6. Access the Web UI
+
+Open your browser and navigate to:
+```
+http://localhost:5000
 ```
 
-`read_chunks.py` will:
+## 📖 Usage
 
-- call a local embedding service at `http://localhost:11434/api/embed` (see configuration below)
-- save a Parquet metadata file (default `embeddings.parquet`)
-- save a dense `.npy` embedding matrix (default `embeddings.npy`)
-- save a FAISS index (default `vector_index.faiss`)
+### Web Interface
 
-If you prefer to import and call functions programmatically, `read_chunks.py` exposes `create_embeddings`, `load_chunks_from_json`, `build_faiss_ip_index`, `build_tfidf`, and `search_hybrid`.
+1. **Register/Login**: Click "Register" to create an account or "Login" to access existing account
+2. **Check Status**: Verify system status in the status bar
+3. **Enter Query**: Type your question in the query box
+4. **Configure Settings**:
+   - **Top K results**: Number of relevant chunks (default: 4)
+   - **Generate answer**: Enable/disable answer generation
+5. **Search**: Click "Search" to query the RAG system
+6. **View Results**:
+   - **Answer**: Generated answer based on retrieved chunks
+   - **Relevant Chunks**: List of chunks with scores and timestamps
+7. **Copy Content**: Click copy buttons to copy answers or chunks
+8. **View History**: Click "Chat History" to view previous queries
 
-Example (python REPL):
+### Command Line Interface
+
+You can also use the CLI for quick queries:
+
+```bash
+python incomings.py --query "What is this video about?" --answer
+```
+
+## 🔌 API Endpoints
+
+### Public Endpoints
+
+#### `GET /`
+- **Description**: API information
+- **Response**: API version and features
+
+#### `GET /status`
+- **Description**: Check system status
+- **Response**: 
+  ```json
+  {
+    "status": "ready",
+    "chunks_count": 87,
+    "ollama_status": "connected"
+  }
+  ```
+
+#### `POST /query`
+- **Description**: Query the RAG system
+- **Body**:
+  ```json
+  {
+    "query": "Your question",
+    "k": 4,
+    "generate_answer": true,
+    "max_ctx": 4000
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "query": "Your question",
+    "chunks": [...],
+    "answer": "Generated answer",
+    "message": "Success"
+  }
+  ```
+
+#### `POST /register`
+- **Description**: Register a new user
+- **Body**:
+  ```json
+  {
+    "username": "user123",
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  ```
+
+#### `POST /login`
+- **Description**: Login and get access token
+- **Body**:
+  ```json
+  {
+    "username": "user123",
+    "password": "password123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "access_token": "jwt_token",
+    "token_type": "bearer",
+    "user": {...}
+  }
+  ```
+
+### Protected Endpoints (Require Authentication)
+
+#### `GET /me`
+- **Description**: Get current user information
+- **Headers**: `Authorization: Bearer <token>`
+
+#### `GET /chat-history`
+- **Description**: Get user's chat history
+- **Headers**: `Authorization: Bearer <token>`
+- **Query Params**: `skip` (optional), `limit` (optional, default: 50)
+
+#### `DELETE /chat-history/{chat_id}`
+- **Description**: Delete a chat history item
+- **Headers**: `Authorization: Bearer <token>`
+
+#### `POST /rebuild`
+- **Description**: Rebuild embeddings and index
+- **Headers**: `Authorization: Bearer <token>` (optional)
+
+## 🔐 Authentication
+
+### Registration
+
+1. Click "Register" button in the header
+2. Enter username, email, and password (minimum 6 characters)
+3. Click "Register"
+4. You'll be automatically logged in after registration
+
+### Login
+
+1. Click "Login" button in the header
+2. Enter username and password
+3. Click "Login"
+4. Your session will be maintained until logout
+
+### Chat History
+
+- Chat history is automatically saved when you're logged in
+- Click "Chat History" to view all your previous queries
+- History includes queries, answers, and timestamps
+
+### Security Features
+
+- **Password Hashing**: Bcrypt with salt
+- **JWT Tokens**: Secure token-based authentication
+- **Session Management**: Secure session handling
+- **SQL Injection Protection**: SQLAlchemy ORM
+- **CORS Protection**: Configured for allowed origins
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# Ollama Configuration
+EMBED_URL=http://127.0.0.1:11434/api/embed
+EMBED_MODEL=nomic-embed-text:latest
+OLLAMA_URL=http://127.0.0.1:11434
+GEN_MODEL=llama3.2:3b
+
+# Database
+DATABASE_URL=sqlite:///./rag_system.db
+
+# Security (CHANGE IN PRODUCTION!)
+SECRET_KEY=your-secret-key-change-this-in-production
+FLASK_SECRET_KEY=your-flask-secret-key-change-this-in-production
+
+# API Configuration
+API_URL=http://localhost:8000
+
+# Chunking Configuration
+SEGMENTS_PER_CHUNK=5
+JSON_DIR=json_output
+```
+
+### Model Configuration
+
+- **Embedding Model**: Default is `nomic-embed-text:latest`. You can use other models like `bge-m3` or `mxbai-embed-large`.
+- **Generation Model**: Default is `llama3.2:3b`. You can use other models like `llama3.2:1b` or `mistral:7b`.
+
+### Chunking Configuration
+
+- **SEGMENTS_PER_CHUNK**: Number of transcript segments per chunk (default: 5)
+- Adjust this in `chunks_with_timestamp.py` and `chunk_to_json.py`
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### 1. "Unable to connect to API"
+- **Solution**: Ensure FastAPI backend is running on port 8000
+- Check: `http://localhost:8000/status`
+
+#### 2. "Embeddings not found"
+- **Solution**: Run the pipeline to generate embeddings first
+- Or use "Rebuild Index" button in the UI
+- Check: `embeddings.parquet` and `vector_index.faiss` exist
+
+#### 3. "Query failed" or "Generation error"
+- **Solution**: Check that Ollama is running
+- Verify models are installed: `ollama list`
+- Check: `OLLAMA_URL` and `GEN_MODEL` in `.env`
+
+#### 4. "Registration failed"
+- **Solution**: Check database is initialized
+- Verify username/email is not already taken
+- Check password is at least 6 characters
+- Check API server is running
+
+#### 5. "Login failed"
+- **Solution**: Verify username and password are correct
+- Check API server is running
+- Check database connection
+
+#### 6. "Database error"
+- **Solution**: Delete `rag_system.db` and restart API server
+- Database will be recreated automatically
+- Or run: `python setup_database.py`
+
+#### 7. "CORS errors"
+- **Solution**: Check CORS configuration in `api.py`
+- Ensure Flask app URL is in allowed origins
+
+#### 8. "Module not found"
+- **Solution**: Install dependencies: `pip install -r requirements.txt`
+- Verify virtual environment is activated
+
+### Debug Mode
+
+Enable debug mode for detailed error messages:
 
 ```python
-from read_chunks import load_chunks_from_json, build_faiss_ip_index, build_tfidf, search_hybrid
-import pandas as pd
-import faiss
+# In api.py
+app = FastAPI(debug=True)
 
-# load existing parquet/index if you already built them, or rebuild via functions above
-df = pd.read_parquet("embeddings.parquet")
-index = faiss.read_index("vector_index.faiss")
-
-# build TF-IDF vectorizer for lexical signal
-from read_chunks import build_tfidf
-tfidf_vectorizer, tfidf_matrix = build_tfidf(df['chunk'].tolist())
-
-# run hybrid search
-results = search_hybrid("explain reinforcement learning", df, index, None, tfidf_vectorizer, tfidf_matrix)
-print(results['top_chunks'])
+# In app.py
+app.run(debug=True)
 ```
 
-## Configuration notes
+## 🛠️ Development
 
-- Embedding endpoint: `read_chunks.py` uses `EMBED_URL = "http://localhost:11434/api/embed"` and `EMBED_MODEL = "bge-m3"` by default. If you run a different embedding service or path, update those constants in `read_chunks.py` or set up a small wrapper.
-- GPU: set `EMBED_OPTIONS = {"num_gpu": 1}` in `read_chunks.py` if your local service supports GPU or change model choices.
-- Chunk size: default is `SEGMENTS_PER_CHUNK = 5` (see `chunks_with_timestamp.py` and `chunk_to_json.py`). Adjust if you want longer/shorter chunks.
-- Hybrid weighting: `ALPHA` in `read_chunks.py` controls how much weight to give embeddings vs lexical TF‑IDF (0.0..1.0).
+### Project Structure
 
-## .gitignore / tracked folders
+- **Backend API**: `api.py` - FastAPI application
+- **Frontend Server**: `app.py` - Flask application
+- **Authentication**: `auth.py` - JWT and password utilities
+- **Database**: `database.py` - SQLAlchemy models
+- **RAG Core**: `read_chunks.py` - Embedding and search logic
 
-This repository is configured to keep the folder structure under source control while ignoring the data inside them. Each data folder contains a `.gitkeep` so the empty folder is tracked, but the contents are ignored. The current `.gitignore` rules:
+### Adding New Features
 
-- Track folders: `audios/`, `chunks/`, `json_output/`, `transcripts/`, `Videos/` (their `.gitkeep` files are tracked)
-- Ignore folder contents: `audios/*`, `chunks/*`, `json_output/*`, `transcripts/*`, `Videos/*`
-- Ignore large artifacts: `embeddings.npy`, `embeddings.parquet`, `vector_index.faiss`, plus wildcard patterns such as `*.faiss`, `*.npy`, `*.parquet`.
+1. **New API Endpoint**: Add to `api.py`
+2. **New UI Feature**: Modify `templates/index.html` and `static/js/app.js`
+3. **New Database Model**: Add to `database.py`
+4. **New Authentication**: Extend `auth.py`
 
-If you previously committed large files and want to remove them from the repo history (and stop tracking them), run:
+### Testing
 
-```powershell
-git rm --cached embeddings.parquet embeddings.npy vector_index.faiss
-git commit -m "Remove large artifact files from tracking"
+Test the setup:
+```bash
+python verify_setup.py
 ```
 
-## Troubleshooting
-
-- SSL / connection errors when calling the embedding service: if you see SSL errors, you are probably calling `https://` against a service that speaks plain HTTP (or has a mismatched cert). Ensure the `EMBED_URL` scheme (`http://` or `https://`) matches your service. For local dev it's typically `http://localhost:11434/...`.
-- No `.json` files found: make sure `chunk_to_json.py` successfully created files under `json_output/` before running `read_chunks.py`.
-- FAISS import errors: install `faiss-cpu` on CPU machines or `faiss-gpu` (ensure compatible CUDA) for GPU.
-
-# Video → RAG (Retrieval-Augmented Generation)
-
-This repository is a lightweight pipeline that converts audio/video into searchable text chunks and provides a hybrid semantic+lexical retrieval layer (embeddings + TF‑IDF + FAISS).
-
-This README has exact commands for the scripts included in this project and notes about configuration, `.gitignore` behavior, and the local embedding service used by `read_chunks.py`.
-
-## What this repo contains
-
-Relevant scripts and folders:
-
-- `audios/` — drop your audio files here (folder tracked, contents ignored by `.gitignore`)
-- `transcripts/` — per-audio `.tsv` transcripts with timestamps (folder tracked, contents ignored)
-- `chunks/` — human-readable chunk `.txt` files (folder tracked, contents ignored)
-- `json_output/` — structured JSON per video (folder tracked, contents ignored)
-- `Videos/` — (optional) original video files (folder tracked, contents ignored)
-- `speech_to_text.py` — runs Whisper over `audios/` and writes `transcripts/*.tsv`
-- `chunks_with_timestamp.py` — groups transcript segments into timestamped chunk files in `chunks/`
-- `chunk_to_json.py` — converts transcripts (`.tsv`) into `json_output/*.json` with `full_text` + `chunks`
-- `read_chunks.py` — loads `json_output`, requests embeddings from a local embedding service, builds FAISS, and provides a hybrid search function
-- `process_video.py` — tiny example to transcribe a single file
-
-## Quick start — full pipeline
-
-1. Install dependencies (see `requirements.txt`):
-
-```powershell
-python -m pip install -r requirements.txt
+Test registration:
+```bash
+python test_registration.py
 ```
 
-2. Put audio files in `audios/` (supported formats: `.mp3`, `.wav`, `.m4a`).
+### Database Migrations
 
-3. Generate transcripts (Whisper):
-
-```powershell
-python speech_to_text.py
+For production, consider using Alembic:
+```bash
+pip install alembic
+alembic init alembic
 ```
 
-This will write TSV files into `transcripts/` with lines formatted as: `start\tend\ttext`.
+## 📝 Scripts Reference
 
-4. (Option A) Create plain text chunks (one `.txt` per chunk):
+### Core Scripts
 
-```powershell
-python chunks_with_timestamp.py
-```
+- **`speech_to_text.py`**: Transcribe audio files using Whisper
+- **`chunks_with_timestamp.py`**: Create timestamped text chunks
+- **`chunk_to_json.py`**: Convert transcripts to JSON format
+- **`read_chunks.py`**: Core RAG library (embeddings, search, generation)
+- **`incomings.py`**: CLI entrypoint for queries
 
-5. (Option B) Convert transcripts into structured JSON (used by `read_chunks.py`):
+### Server Scripts
 
-```powershell
-python chunk_to_json.py
-```
+- **`run_api.py`**: Start FastAPI backend server
+- **`run_app.py`**: Start Flask frontend server
+- **`setup_database.py`**: Initialize database
 
-6. Build embeddings and FAISS index, then run an example hybrid search:
+### Utility Scripts
 
-```powershell
-python read_chunks.py
-```
+- **`verify_setup.py`**: Verify installation and setup
+- **`test_registration.py`**: Test registration endpoint
+- **`test_servers.py`**: Test server connectivity
 
-`read_chunks.py` will:
+## 🔒 Security Notes
 
-- call a local embedding service at `http://localhost:11434/api/embed` (see configuration below)
-- save a Parquet metadata file (default `embeddings.parquet`)
-- save a dense `.npy` embedding matrix (default `embeddings.npy`)
-- save a FAISS index (default `vector_index.faiss`)
+### Production Deployment
 
-If you prefer to import and call functions programmatically, `read_chunks.py` exposes `create_embeddings`, `load_chunks_from_json`, `build_faiss_ip_index`, `build_tfidf`, and `search_hybrid`.
+1. **Change Secret Keys**: Always change `SECRET_KEY` and `FLASK_SECRET_KEY` in production
+2. **Use HTTPS**: Use HTTPS in production to protect tokens in transit
+3. **Database Security**: Use PostgreSQL with proper authentication in production
+4. **Environment Variables**: Store secrets in environment variables, not in code
+5. **Rate Limiting**: Add rate limiting to prevent abuse
+6. **Input Validation**: All inputs are validated, but review for your use case
 
-Example (python REPL):
+### Password Security
 
-```python
-from read_chunks import load_chunks_from_json, build_faiss_ip_index, build_tfidf, search_hybrid
-import pandas as pd
-import faiss
+- Passwords are hashed using bcrypt with salt
+- Minimum password length: 6 characters (configurable)
+- Passwords are never stored in plain text
 
-# load existing parquet/index if you already built them, or rebuild via functions above
-df = pd.read_parquet("embeddings.parquet")
-index = faiss.read_index("vector_index.faiss")
+### Token Security
 
-# build TF-IDF vectorizer for lexical signal
-from read_chunks import build_tfidf
-tfidf_vectorizer, tfidf_matrix = build_tfidf(df['chunk'].tolist())
+- JWT tokens expire after 7 days (configurable)
+- Tokens are stored in localStorage (consider httpOnly cookies for production)
+- Tokens are sent in Authorization header
 
-# run hybrid search
-results = search_hybrid("explain reinforcement learning", df, index, None, tfidf_vectorizer, tfidf_matrix)
-print(results['top_chunks'])
-```
+## 📚 Additional Documentation
 
-## Configuration notes
+- **`AUTH_SETUP.md`**: Detailed authentication setup guide
+- **`QUICK_START_AUTH.md`**: Quick start guide for authentication
+- **`UI_README.md`**: UI-specific documentation
+- **`REGISTRATION_FIX_SUMMARY.md`**: Registration troubleshooting guide
 
-- Embedding endpoint: `read_chunks.py` uses `EMBED_URL = "http://localhost:11434/api/embed"` and `EMBED_MODEL = "bge-m3"` by default. If you run a different embedding service or path, update those constants in `read_chunks.py` or set up a small wrapper.
-- GPU: set `EMBED_OPTIONS = {"num_gpu": 1}` in `read_chunks.py` if your local service supports GPU or change model choices.
-- Chunk size: default is `SEGMENTS_PER_CHUNK = 5` (see `chunks_with_timestamp.py` and `chunk_to_json.py`). Adjust if you want longer/shorter chunks.
-- Hybrid weighting: `ALPHA` in `read_chunks.py` controls how much weight to give embeddings vs lexical TF‑IDF (0.0..1.0).
+## 🤝 Contributing
 
-## .gitignore / tracked folders
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-This repository is configured to keep the folder structure under source control while ignoring the data inside them. Each data folder contains a `.gitkeep` so the empty folder is tracked, but the contents are ignored. The current `.gitignore` rules:
+## 📄 License
 
-- Track folders: `audios/`, `chunks/`, `json_output/`, `transcripts/`, `Videos/` (their `.gitkeep` files are tracked)
-- Ignore folder contents: `audios/*`, `chunks/*`, `json_output/*`, `transcripts/*`, `Videos/*`
-- Ignore large artifacts: `embeddings.npy`, `embeddings.parquet`, `vector_index.faiss`, plus wildcard patterns such as `*.faiss`, `*.npy`, `*.parquet`.
+MIT License
 
-If you previously committed large files and want to remove them from the repo history (and stop tracking them), run:
+## 🙏 Acknowledgments
 
-```powershell
-git rm --cached embeddings.parquet embeddings.npy vector_index.faiss
-git commit -m "Remove large artifact files from tracking"
-```
+- OpenAI Whisper for speech-to-text
+- Ollama for embeddings and generation
+- FAISS for vector search
+- FastAPI and Flask for web frameworks
 
-## Troubleshooting
+## 📞 Support
 
-- SSL / connection errors when calling the embedding service: if you see SSL errors, you are probably calling `https://` against a service that speaks plain HTTP (or has a mismatched cert). Ensure the `EMBED_URL` scheme (`http://` or `https://`) matches your service. For local dev it's typically `http://localhost:11434/...`.
-- No `.json` files found: make sure `chunk_to_json.py` successfully created files under `json_output/` before running `read_chunks.py`.
-- FAISS import errors: install `faiss-cpu` on CPU machines or `faiss-gpu` (ensure compatible CUDA) for GPU.
+For issues and questions:
+1. Check the Troubleshooting section
+2. Review the documentation files
+3. Check existing issues
+4. Create a new issue with detailed information
 
-# Video → RAG (Retrieval-Augmented Generation)
+## 🎯 Next Steps
 
-This repository provides a small pipeline that converts audio/video into searchable, timestamped text chunks and adds a hybrid retrieval layer combining semantic embeddings (BGE-M3) and lexical TF‑IDF with FAISS indexing.
+- [ ] Add password reset functionality
+- [ ] Add email verification
+- [ ] Add user profile management
+- [ ] Add chat history search and filtering
+- [ ] Add export chat history feature
+- [ ] Add user roles and permissions
+- [ ] Add API rate limiting
+- [ ] Add unit tests
+- [ ] Add integration tests
+- [ ] Migrate to PostgreSQL for production
 
-What you get: speech → transcripts (.tsv) → chunks (.txt / JSON) → embeddings + FAISS → hybrid search.
+---
 
-## Repository layout
-
-- `audios/` — input audio files (folder tracked; contents ignored by `.gitignore`)
-- `transcripts/` — Whisper transcripts (`.tsv`) with timestamps (folder tracked; contents ignored)
-- `chunks/` — human-readable chunk `.txt` files (folder tracked; contents ignored)
-- `json_output/` — structured JSON per video with `full_text` and `chunks` (folder tracked; contents ignored)
-- `Videos/` — optional source videos (folder tracked; contents ignored)
-- `speech_to_text.py` — run Whisper to transcribe files in `audios/` → `transcripts/*.tsv`
-- `chunks_with_timestamp.py` — groups transcript segments into timestamped `.txt` chunks in `chunks/`
-- `chunk_to_json.py` — converts `transcripts/*.tsv` → `json_output/*.json` (used by `read_chunks.py`)
-- `read_chunks.py` — loads `json_output`, creates embeddings via a local service, builds FAISS, and provides `search_hybrid`
-- `process_video.py` — minimal example showing whisper usage for a single file
-- `requirements.txt` — Python dependencies
-
-## Quick start
-
-1. Install dependencies:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
-2. Add audio files to `audios/` (.mp3, .wav, .m4a).
-
-3. Transcribe audio to timestamped TSV files:
-
-```powershell
-python speech_to_text.py
-```
-
-4. (Optional) Create human-readable chunk text files:
-
-```powershell
-python chunks_with_timestamp.py
-```
-
-5. Convert transcripts to structured JSON for embedding:
-
-```powershell
-python chunk_to_json.py
-```
-
-6. Build embeddings, create FAISS index, and run an example hybrid query:
-
-```powershell
-python read_chunks.py
-```
-
-After running `read_chunks.py` you'll find (by default):
-
-- `embeddings.parquet` — dataframe metadata and embeddings
-- `embeddings.npy` — dense embedding matrix
-- `vector_index.faiss` — FAISS index file
-
-## How `read_chunks.py` works (summary)
-
-- Loads `json_output/*.json` and extracts `chunks` (text + start/end timestamps).
-- Calls a local embedding service at `http://localhost:11434/api/embed` to get embeddings (BGE‑M3 by default).
-- Builds a FAISS inner-product index over L2-normalized vectors to support cosine similarity.
-- Builds a TF‑IDF matrix for lexical similarity.
-- Runs a hybrid search that blends embedding and TF‑IDF scores (weight controlled by `ALPHA`).
-
-You can import functions from `read_chunks.py` (e.g. `load_chunks_from_json`, `build_tfidf`, `search_hybrid`) if you want to embed or query programmatically.
-
-## Configuration
-
-Edit `read_chunks.py` constants to tune behavior:
-
-- `EMBED_URL` — local embedding service URL (default: `http://localhost:11434/api/embed`)
-- `EMBED_MODEL` — embedding model name (default: `bge-m3`)
-- `EMBED_OPTIONS` — options sent to the embedding service (`{"num_gpu": 0}` by default)
-- `ALPHA` — embedding vs lexical weighting (0.0..1.0)
-- `JSON_DIR`, `PARQUET_PATH`, `EMB_NPY_PATH`, `FAISS_PATH` — output file paths
-
-Chunking behavior is controlled in `chunks_with_timestamp.py` and `chunk_to_json.py` via `SEGMENTS_PER_CHUNK` (default 5).
-
-## .gitignore and folder tracking
-
-This repository is set up to keep empty folders under version control while ignoring the data they will contain. Each data folder (`audios`, `transcripts`, `chunks`, `json_output`, `Videos`) has a `.gitkeep` and the `.gitignore` uses `folder/*` + `!folder/.gitkeep` so the folder is tracked but its contents are not.
-
-Large artifacts are explicitly ignored:
-
-- `embeddings.npy`
-- `embeddings.parquet`
-- `vector_index.faiss`
-- wildcard patterns: `*.faiss`, `*.npy`, `*.parquet`
-
-If you previously committed those artifacts, remove them from tracking with:
-
-```powershell
-git rm --cached embeddings.parquet embeddings.npy vector_index.faiss
-git commit -m "Remove large artifact files from tracking"
-```
-
-## Troubleshooting
-
-- Embedding connection/SSL errors: ensure `EMBED_URL` uses the correct scheme (`http://` vs `https://`). Local dev services usually run on plain HTTP.
-- No JSON files found: run `chunk_to_json.py` and confirm `json_output/` contains `.json` files.
-- FAISS import issues: install `faiss-cpu` for CPU or `faiss-gpu` (requires matching CUDA) for GPU.
-
-## Next suggestions (I can implement)
-
-- Add a `run_pipeline.py` to orchestrate the full pipeline (transcribe → chunk → json → embed → index).
-- Add a CLI for `read_chunks.py` so you can query from the command line.
-- Add unit tests (small) for `chunk_to_json.py` and `read_chunks.py` functions (mock embedding calls).
-
-If you'd like any of the above, tell me which and I'll add it.
+**Happy Querying! 🚀**

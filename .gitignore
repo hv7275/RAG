@@ -46,3 +46,9 @@ vector_index.faiss
 *.parquet
 *.joblib
 *.env
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+rag_system.db

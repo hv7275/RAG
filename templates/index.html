@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System - Query Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>🔍 RAG System Query Interface</h1>
+                    <p class="subtitle">Retrieval-Augmented Generation for Video/Audio Content</p>
+                </div>
+                <div class="auth-section" id="authSection">
+                    <div class="user-info" id="userInfo" style="display: none;">
+                        <span id="usernameDisplay"></span>
+                        <button class="btn btn-small" id="chatHistoryBtn">Chat History</button>
+                        <button class="btn btn-small btn-secondary" id="logoutBtn">Logout</button>
+                    </div>
+                    <div class="auth-buttons" id="authButtons">
+                        <button class="btn btn-small" id="loginBtn">Login</button>
+                        <button class="btn btn-small btn-secondary" id="registerBtn">Register</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="status-bar" id="statusBar">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="statusValue">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Chunks:</span>
+                <span class="status-value" id="chunkCount">-</span>
+            </div>
+        </div>
+
+        <main>
+            <div class="query-section">
+                <form id="queryForm">
+                    <div class="form-group">
+                        <label for="queryInput">Enter your query:</label>
+                        <textarea 
+                            id="queryInput" 
+                            name="query" 
+                            rows="3" 
+                            placeholder="What would you like to know about the video/audio content?"
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-options">
+                        <div class="form-group-inline">
+                            <label for="kInput">Top K results:</label>
+                            <input type="number" id="kInput" name="k" value="4" min="1" max="20">
+                        </div>
+                        
+                        <div class="form-group-inline">
+                            <label>
+                                <input type="checkbox" id="generateAnswer" name="generate_answer" checked>
+                                Generate answer
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="btn-text">Search</span>
+                        <span class="btn-loader" style="display: none;">⏳ Searching...</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="answer-section" id="answerSection">
+                    <div class="answer-header">
+                        <h2>Answer</h2>
+                        <button class="copy-btn" id="copyAnswerBtn" title="Copy answer to clipboard">
+                            <span class="copy-icon">📋</span>
+                            <span class="copy-text">Copy</span>
+                        </button>
+                    </div>
+                    <div class="answer-content" id="answerContent"></div>
+                </div>
+
+                <div class="chunks-section">
+                    <h2>Relevant Answer</h2>
+                    <div class="chunks-list" id="chunksList"></div>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+        </main>
+
+        <!-- Login Modal -->
+        <div class="modal" id="loginModal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" id="closeLoginModal">&times;</span>
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">Username</label>
+                        <input type="text" id="loginUsername" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div class="error-message" id="loginError" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div class="modal" id="registerModal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" id="closeRegisterModal">&times;</span>
+                <h2>Register</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerUsername">Username</label>
+                        <input type="text" id="registerUsername" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+                <div class="error-message" id="registerError" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Chat History Modal -->
+        <div class="modal" id="chatHistoryModal" style="display: none;">
+            <div class="modal-content modal-large">
+                <span class="close" id="closeChatHistoryModal">&times;</span>
+                <h2>Chat History</h2>
+                <div id="chatHistoryList" class="chat-history-list"></div>
+            </div>
+        </div>
+
+        <footer>
+            <button class="btn btn-secondary" id="rebuildBtn">Rebuild Index</button>
+            <p class="footer-text">RAG System v2.0.0</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
