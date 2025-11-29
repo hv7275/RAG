@@ -86,6 +86,7 @@ class QueryRequest(BaseModel):
     generate_answer: bool = True
     max_ctx: int = 8000
     image: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = None # Add history field
 
 class ChunkResult(BaseModel):
     chunk_id: int
@@ -241,7 +242,8 @@ async def query(
                     request.max_ctx,
                     gen_model=gen_model,
                     ollama_url=ollama_url,
-                    images=[request.image] if request.image else None
+                    images=[request.image] if request.image else None,
+                    history=request.history # Pass history
                 )
             except Exception as e:
                 answer = f"Error generating answer: {str(e)}"

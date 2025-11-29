@@ -53,7 +53,8 @@ def query():
                 "query": query_text,
                 "k": k,
                 "generate_answer": generate_answer,
-                "max_ctx": max_ctx
+                "max_ctx": max_ctx,
+                "history": data.get("history", []) # Forward history
             },
             headers=get_auth_headers(),
             timeout=120  # Longer timeout for generation

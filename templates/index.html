@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatGPT</title>
+    <title>AI Assistant</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- CSS -->
@@ -21,49 +21,35 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-top">
                 <div class="sidebar-header">
+                    <button id="newChatBtn" class="btn-sidebar-auth" onclick="resetChat()">
+                        <i class="fa-solid fa-plus"></i> New Chat
+                    </button>
                     <button id="sidebarToggle" class="btn-icon-sidebar" title="Close sidebar">
                         <i class="fa-solid fa-bars-staggered"></i>
-                    </button>
-                    <button id="newChatBtn" class="btn-icon-sidebar" title="New chat" onclick="resetChat()">
-                        <i class="fa-regular fa-pen-to-square"></i>
                     </button>
                 </div>
 
                 <nav class="sidebar-nav">
                     <button class="nav-item active">
-                        <i class="fa-brands fa-microblog"></i>
-                        <span>ChatGPT 5.1</span>
-                        <i class="fa-solid fa-chevron-down dropdown-icon"></i>
+                        <i class="fa-solid fa-sparkles"></i>
+                        <span>AI Assistant</span>
                     </button>
                     <button class="nav-item">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <span>Search chats</span>
+                        <span>Search</span>
                     </button>
                     <button class="nav-item">
-                        <i class="fa-solid fa-book-open"></i>
-                        <span>Library</span>
-                    </button>
-                    <button class="nav-item">
-                        <i class="fa-solid fa-shapes"></i>
-                        <span>GPTs</span>
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span>Projects</span>
                     </button>
                 </nav>
 
                 <div class="sidebar-section">
-                    <div class="section-title">Projects</div>
-                    <button class="nav-item">
-                        <i class="fa-regular fa-folder-open"></i>
-                        <span>New project</span>
-                    </button>
-                    <button class="nav-item">
-                        <i class="fa-regular fa-folder"></i>
-                        <span>e-com site</span>
-                    </button>
+                    <div class="section-title">Recent Chats</div>
                 </div>
             </div>
 
             <div class="sidebar-middle" id="chatHistoryList">
-                <div class="section-title">Your chats</div>
                 <!-- Chat history items will be injected here -->
             </div>
 
@@ -80,7 +66,7 @@
                     <div class="auth-buttons" style="width: 100%;">
                         <button id="loginBtn" class="btn-sidebar-auth">Log in</button>
                         <button id="registerBtn" class="btn-sidebar-auth"
-                            style="background-color: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: 0.25rem;">Sign
+                            style="background: transparent; border: 1px solid var(--sidebar-border); margin-top: 0.5rem;">Sign
                             up</button>
                     </div>
                     <button id="logoutBtn" class="btn-icon-sidebar" title="Log out"
@@ -98,11 +84,11 @@
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <div class="model-selector">
-                    <span>ChatGPT 5.1</span>
+                    <span>GPT-4o</span>
                     <i class="fa-solid fa-chevron-down"></i>
                 </div>
                 <div class="top-actions">
-                    <button class="btn-icon"><i class="fa-regular fa-user"></i></button>
+                    <button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
                 </div>
             </header>
 
@@ -113,7 +99,7 @@
                         <i class="fa-solid fa-bolt"></i>
                     </div>
                 </div>
-                <h1>What can I help with?</h1>
+                <h1>How can I help you today?</h1>
             </div>
 
             <!-- Chat Stream (Hidden initially) -->
@@ -124,6 +110,16 @@
             <!-- Input Area -->
             <div class="input-area-container">
                 <div class="input-area">
+                    <form class="query-form" id="queryForm">
+                        <button type="button" class="btn-attach" title="Attach image">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        <textarea id="queryInput" placeholder="Message AI..." rows="1"></textarea>
+                        <button type="submit" class="btn-send" id="submitBtn" disabled>
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                    </form>
                     <div class="input-container">
                         <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
                             <img id="imagePreview" src="" alt="Preview">
@@ -131,28 +127,13 @@
                                     class="fa-solid fa-xmark"></i></button>
                         </div>
 
-                        <form id="queryForm" class="query-form">
-                            <button type="button" class="btn-attach"><i class="fa-solid fa-paperclip"></i></button>
-                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
-
-                            <textarea id="queryInput" placeholder="Message ChatGPT..." rows="1"></textarea>
-
-                            <button type="submit" id="submitBtn" class="btn-submit" disabled>
-                                <i class="fa-solid fa-arrow-up"></i>
-                            </button>
-                        </form>
-                    </div>
-                    <div class="footer-text">
-                        <p>ChatGPT can make mistakes. Check important info.</p>
-                        <div class="footer-controls">
-                            <label class="footer-toggle">
-                                <input type="checkbox" id="generateAnswer" checked>
-                                <span>Generate Answer</span>
-                            </label>
-                            <div class="k-input-wrapper" title="Number of chunks">
-                                <span>K:</span>
-                                <input type="number" id="kInput" value="4" min="1" max="20">
-                            </div>
+                        <label class="footer-toggle">
+                            <input type="checkbox" id="generateAnswer" checked>
+                            <span>Web Search</span>
+                        </label>
+                        <div class="k-input-wrapper" title="Number of chunks">
+                            <span>Sources:</span>
+                            <input type="number" id="kInput" value="4" min="1" max="20">
                         </div>
                     </div>
                 </div>
@@ -173,7 +154,7 @@
                     <input type="password" name="loginPassword" placeholder="Password" required>
                 </div>
                 <div id="loginError" class="error-message"></div>
-                <button type="submit" class="btn-primary btn-block">Continue</button>
+                <button type="submit" class="btn-primary">Continue</button>
             </form>
         </div>
     </div>
@@ -193,7 +174,7 @@
                     <input type="password" name="registerPassword" placeholder="Password" required>
                 </div>
                 <div id="registerError" class="error-message"></div>
-                <button type="submit" class="btn-primary btn-block">Continue</button>
+                <button type="submit" class="btn-primary">Continue</button>
             </form>
         </div>
     </div>

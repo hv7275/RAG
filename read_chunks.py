@@ -238,7 +238,7 @@ def search_index(index: faiss.Index, q: np.ndarray, k: int):
 # ==================
 # Prompt + Generation
 # ==================
-def build_prompt(query: str, contexts: List[Dict[str, Any]], limit: int = 4000):
+def build_prompt(query: str, contexts: List[Dict[str, Any]], limit: int = 4000, history: List[Dict[str, str]] = None):
     system_instruction = """You are a helpful and precise assistant. Your goal is to answer the user's question using ONLY the provided context snippets.
     
 Guidelines:
@@ -249,10 +249,19 @@ Guidelines:
 5. Provide a clear, direct answer.
 """
     
+    # Format history
+    history_text = ""
+    if history:
+        history_text = "\n\nChat History:\n"
+        for msg in history[-5:]: # Limit to last 5 messages to save context
+            role = "User" if msg.get("role") == "user" else "Assistant"
+            content = msg.get("content", "").strip()
+            history_text += f"{role}: {content}\n"
+
     parts = []
     used = 0
-    # Reserve space for system instruction, query, and some buffer
-    base_len = len(system_instruction) + len(f"\n\nQuestion: {query}\n\nContext:\n") + len("\n\nAnswer:")
+    # Reserve space for system instruction, query, history, and some buffer
+    base_len = len(system_instruction) + len(history_text) + len(f"\n\nQuestion: {query}\n\nContext:\n") + len("\n\nAnswer:")
     available = limit - base_len - 200
     
     for c in contexts:
@@ -269,7 +278,7 @@ Guidelines:
             truncated = first_chunk[:available-100] + "..."
             parts.append(f"[chunk_id={contexts[0]['chunk_id']}]\n{truncated}\n")
     
-    return f"{system_instruction}\n\nQuestion: {query}\n\nContext:\n" + "\n---\n".join(parts) + "\n\nAnswer:"
+    return f"{system_instruction}{history_text}\n\nQuestion: {query}\n\nContext:\n" + "\n---\n".join(parts) + "\n\nAnswer:"
 
 def _normalize_base_url(url: str) -> str:
     """
@@ -603,10 +612,10 @@ def clean_answer(answer: str) -> str:
     return answer
 
 def generate_answer(query: str, df: pd.DataFrame, hits: List[int], max_ctx: int = 4000,
-                    gen_model: str = DEFAULT_GEN_MODEL, ollama_url: str = DEFAULT_OLLAMA_URL, images: List[str] = None):
+                    gen_model: str = DEFAULT_GEN_MODEL, ollama_url: str = DEFAULT_OLLAMA_URL, images: List[str] = None, history: List[Dict[str, str]] = None):
     # Build the context rows *as dicts*; this fixes the 'string indices' TypeError
     ctx = [{"chunk_id": int(df.iloc[i]["chunk_id"]), "chunk": df.iloc[i]["chunk"]} for i in hits]
-    prompt = build_prompt(query, ctx, max_ctx)
+    prompt = build_prompt(query, ctx, max_ctx, history)
     
     # Check prompt length and warn if too long
     if len(prompt) > max_ctx * 4:  # Rough estimate: 4 chars per token

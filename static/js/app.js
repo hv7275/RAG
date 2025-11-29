@@ -1,5 +1,6 @@
 // RAG System Frontend JavaScript - High Fidelity ChatGPT Replica
 const API_BASE = '';
+let selectedImageBase64 = null;
 
 // Check authentication status on page load
 document.addEventListener('DOMContentLoaded', function () {
@@ -113,34 +114,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-let selectedImageBase64 = null;
+function switchToChatMode() {
+    document.getElementById('landingView').style.display = 'none';
+    document.getElementById('chatStream').style.display = 'block';
+    document.querySelector('.app-container').classList.add('chat-active');
+}
 
 function resetChat() {
-    console.log('Resetting chat...');
+    conversationHistory = [];
     document.getElementById('landingView').style.display = 'flex';
     document.getElementById('chatStream').style.display = 'none';
     document.getElementById('chatStream').innerHTML = '';
-    selectedImageBase64 = null;
+    document.querySelector('.app-container').classList.remove('chat-active');
 
+    // Reset input
     const queryInput = document.getElementById('queryInput');
     if (queryInput) {
         queryInput.value = '';
         queryInput.style.height = 'auto';
     }
-
-    const imageInput = document.getElementById('imageInput');
-    if (imageInput) imageInput.value = '';
-
+    selectedImageBase64 = null;
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
-
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) submitBtn.disabled = true;
-}
-
-function switchToChatMode() {
-    document.getElementById('landingView').style.display = 'none';
-    document.getElementById('chatStream').style.display = 'block';
 }
 
 async function checkStatus() {
@@ -205,7 +202,7 @@ async function loadChatHistory() {
     if (!token) return;
 
     try {
-        const response = await fetch(`${API_BASE}/chat-history`, {
+        const response = await fetch(`${API_BASE}/chat-history?limit=1000`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -219,9 +216,7 @@ async function loadChatHistory() {
                 data.chats.forEach(chat => {
                     const btn = document.createElement('button');
                     btn.className = 'nav-item';
-                    btn.style.width = '100%';
-                    btn.style.justifyContent = 'flex-start';
-                    btn.style.padding = '0.75rem 1rem';
+                    // Inline styles removed, relying on CSS classes
                     btn.innerHTML = `
                         <i class="fa-regular fa-message"></i>
                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(chat.query)}</span>
@@ -251,6 +246,8 @@ function loadChat(chat) {
         appendAIMessage({ answer: chat.answer, chunks: [] }); // We don't have chunks in history summary
     }
 }
+
+let conversationHistory = [];
 
 async function handleQuery(e) {
     if (e) e.preventDefault();
@@ -285,6 +282,11 @@ async function handleQuery(e) {
     const loadingId = appendLoadingMessage();
 
     try {
+        // Add user message to history (if text exists)
+        if (query) {
+            conversationHistory.push({ role: "user", content: query });
+        }
+
         const response = await fetch(`${API_BASE}/query`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -293,7 +295,8 @@ async function handleQuery(e) {
                 k: parseInt(kInput.value),
                 generate_answer: generateAnswer.checked,
                 max_ctx: 4000,
-                image: imageToSend
+                image: imageToSend,
+                history: conversationHistory // Send history
             })
         });
 
@@ -304,13 +307,22 @@ async function handleQuery(e) {
 
         if (response.ok) {
             appendAIMessage(data);
+            // Add AI response to history
+            if (data.answer) {
+                conversationHistory.push({ role: "assistant", content: data.answer });
+            }
             loadChatHistory();
         } else {
             appendErrorMessage(data.error || 'Query failed');
+            // Remove failed user message from history to keep state consistent? 
+            // For now, we keep it simple.
         }
     } catch (error) {
         removeMessage(loadingId);
         appendErrorMessage(`Request failed: ${error.message}`);
+    } finally {
+        // Re-enable input and focus
+        queryInput.focus();
     }
 }
 
@@ -371,15 +383,15 @@ function appendAIMessage(data) {
     // Sources Accordion (Styled minimally)
     if (data.chunks && data.chunks.length > 0) {
         const sourcesHtml = data.chunks.map(chunk => `
-        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px;">
-            <div style="font-weight: 600; font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.title)}</div>
-            <div style="font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.chunk)}</div>
+        <div class="source-item">
+            <div class="source-title">${escapeHtml(chunk.title)}</div>
+            <div class="source-content">${escapeHtml(chunk.chunk)}</div>
         </div>
     `).join('');
 
         content += `
         <div style="margin-top: 1rem;">
-            <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: #b4b4b4; cursor: pointer; font-size: 0.8rem;">
+            <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" class="sources-toggle">
                 <i class="fa-solid fa-book"></i> ${data.chunks.length} Sources
             </button>
             <div style="display: none; margin-top: 0.5rem;">
@@ -390,8 +402,10 @@ function appendAIMessage(data) {
     }
 
     msgDiv.innerHTML = `
-    <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
-    <div class="message-content">${content}</div>
+    <div class="message-content-wrapper">
+        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+        <div class="message-content">${content}</div>
+    </div>
 `;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
@@ -402,8 +416,8 @@ function appendErrorMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ai-message';
     msgDiv.innerHTML = `
-    <div class="message-avatar" style="border-color: var(--error-color); color: var(--error-color)"><i class="fa-solid fa-triangle-exclamation"></i></div>
-    <div class="message-content"><p style="color: var(--error-color)">${escapeHtml(text)}</p></div>
+    <div class="message-avatar error-avatar"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="message-content"><p class="error-text">${escapeHtml(text)}</p></div>
 `;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
