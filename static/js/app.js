@@ -32,14 +32,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (this.value === '') this.style.height = 'auto';
 
         // Enable/Disable submit button
-        submitBtn.disabled = this.value.trim() === '';
+        submitBtn.disabled = this.value.trim() === '' && !selectedImageBase64;
     });
 
     // Submit on Enter (Shift+Enter for newline)
     queryInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (this.value.trim() !== '') {
+            if (this.value.trim() !== '' || selectedImageBase64) {
                 handleQuery(e);
             }
         }
@@ -47,6 +47,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Query form submission
     document.getElementById('queryForm').addEventListener('submit', handleQuery);
+
+    // Image Upload Logic
+    const imageInput = document.getElementById('imageInput');
+    const btnAttach = document.querySelector('.btn-attach');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImageBtn = document.getElementById('removeImageBtn');
+
+    btnAttach.addEventListener('click', () => imageInput.click());
+
+    imageInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                selectedImageBase64 = e.target.result.split(',')[1]; // Remove prefix
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+                submitBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    removeImageBtn.addEventListener('click', () => {
+        selectedImageBase64 = null;
+        imageInput.value = '';
+        imagePreviewContainer.style.display = 'none';
+        submitBtn.disabled = queryInput.value.trim() === '';
+    });
 
     // Auth Buttons
     const loginBtn = document.getElementById('loginBtn');
@@ -75,13 +105,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+let selectedImageBase64 = null;
+
 function resetChat() {
     document.getElementById('landingView').style.display = 'flex';
     document.getElementById('chatStream').style.display = 'none';
     document.getElementById('chatStream').innerHTML = '';
-
-    // Reset input position by ensuring landing view is visible
-    // CSS handles the positioning based on landing view visibility
+    selectedImageBase64 = null;
+    document.getElementById('imageInput').value = '';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
 }
 
 function switchToChatMode() {
@@ -129,19 +161,26 @@ async function handleQuery(e) {
     const kInput = document.getElementById('kInput');
     const generateAnswer = document.getElementById('generateAnswer');
     const submitBtn = document.getElementById('submitBtn');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
     const query = queryInput.value.trim();
-    if (!query) return;
+    if (!query && !selectedImageBase64) return;
 
     // Switch UI to chat mode
     switchToChatMode();
 
     // Append User Message
-    appendUserMessage(query);
+    appendUserMessage(query, selectedImageBase64);
+
+    // Capture image before clearing
+    const imageToSend = selectedImageBase64;
 
     // Clear input and reset height
     queryInput.value = '';
     queryInput.style.height = 'auto';
+    selectedImageBase64 = null;
+    document.getElementById('imageInput').value = '';
+    imagePreviewContainer.style.display = 'none';
     submitBtn.disabled = true;
 
     // Show Loading
@@ -152,10 +191,11 @@ async function handleQuery(e) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                query: query,
+                query: query || "Describe this image", // Fallback if only image sent
                 k: parseInt(kInput.value),
                 generate_answer: generateAnswer.checked,
-                max_ctx: 4000
+                max_ctx: 4000,
+                image: imageToSend
             })
         });
 
@@ -176,12 +216,21 @@ async function handleQuery(e) {
     }
 }
 
-function appendUserMessage(text) {
+function appendUserMessage(text, imageBase64) {
     const chatStream = document.getElementById('chatStream');
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user-message';
+
+    let content = '';
+    if (imageBase64) {
+        content += `<img src="data:image/jpeg;base64,${imageBase64}" class="message-image">`;
+    }
+    if (text) {
+        content += `<p>${escapeHtml(text)}</p>`;
+    }
+
     msgDiv.innerHTML = `
-        <div class="message-content"><p>${escapeHtml(text)}</p></div>
+        <div class="message-content">${content}</div>
     `;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;

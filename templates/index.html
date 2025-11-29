@@ -110,41 +110,16 @@
 
             <!-- Chat Stream (Hidden initially) -->
             <div class="chat-stream" id="chatStream" style="display: none;">
-                <!-- Messages will be appended here -->
-            </div>
-
-            <!-- Input Area -->
-            <div class="input-area-container" id="inputContainer">
-                <div class="input-area">
-                    <form id="queryForm" class="query-form">
-                        <button type="button" class="btn-attach" title="Attach file">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                        <textarea id="queryInput" placeholder="Ask anything" rows="1"></textarea>
-                        <div class="input-actions">
-                            <button type="button" class="btn-voice" title="Use voice">
-                                <i class="fa-solid fa-microphone"></i>
-                            </button>
-                            <button type="submit" id="submitBtn" class="btn-send" disabled>
-                                <i class="fa-solid fa-arrow-up"></i>
-                            </button>
-                        </div>
-                    </form>
-                    <div class="input-footer">
-                        <div class="settings-toggles">
-                            <label class="toggle-switch" title="Generate AI Answer">
-                                <input type="checkbox" id="generateAnswer" checked>
-                                <span class="slider"></span>
-                            </label>
-                            <div class="k-input-wrapper" title="Number of chunks">
-                                <span>K:</span>
-                                <input type="number" id="kInput" value="4" min="1" max="20">
-                            </div>
-                        </div>
-                    </div>
+                </label>
+                <div class="k-input-wrapper" title="Number of chunks">
+                    <span>K:</span>
+                    <input type="number" id="kInput" value="4" min="1" max="20">
                 </div>
             </div>
-        </main>
+    </div>
+    </div>
+    </div>
+    </main>
     </div>
 
     <!-- Modals -->
