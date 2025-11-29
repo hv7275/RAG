@@ -98,6 +98,20 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
 
     // Close modal when clicking outside
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    // Feature Cards Interactivity
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach(card => {
+        card.addEventListener('click', function () {
+            const action = this.getAttribute('data-action');
+            handleFeatureClick(action);
+        });
+    });
     window.addEventListener('click', function (event) {
         const modals = ['loginModal', 'registerModal'];
         modals.forEach(modalId => {
@@ -353,7 +367,7 @@ function appendLoadingMessage() {
     msgDiv.id = id;
     msgDiv.className = 'message ai-message';
     msgDiv.innerHTML = `
-    <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+    <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
     <div class="message-content">
         <p><i class="fa-solid fa-circle-notch fa-spin"></i></p>
     </div>
@@ -403,7 +417,7 @@ function appendAIMessage(data) {
 
     msgDiv.innerHTML = `
     <div class="message-content-wrapper">
-        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+        <div class="message-avatar"><i class="fa-solid fa-robot"></i></div>
         <div class="message-content">${content}</div>
     </div>
 `;
@@ -522,5 +536,52 @@ async function handleLogout() {
         // Clear chat history from view
         const chatHistoryList = document.getElementById('chatHistoryList');
         if (chatHistoryList) chatHistoryList.innerHTML = '<div class="section-title">Your chats</div>';
+    }
+}
+
+function handleFeatureClick(action) {
+    const queryInput = document.getElementById('queryInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const netSearchCheckbox = document.getElementById('generateAnswer');
+
+    // Focus input
+    queryInput.focus();
+
+    switch (action) {
+        case 'voice':
+            alert('Voice module initializing... (Microphone access required)');
+            break;
+        case 'search':
+            if (netSearchCheckbox) netSearchCheckbox.checked = true;
+            queryInput.value = "Search for: ";
+            break;
+        case 'text':
+            queryInput.value = "Write a: ";
+            break;
+        case 'image':
+            queryInput.value = "/image ";
+            break;
+        case 'code':
+            queryInput.value = "Write code for: ";
+            break;
+        case 'automation':
+            queryInput.value = "Automate task: ";
+            break;
+        case 'knowledge':
+            queryInput.value = "Query database: ";
+            break;
+        case 'settings':
+            alert('System Settings: Configuration module locked by administrator.');
+            break;
+        default:
+            console.log('Unknown action:', action);
+    }
+
+    // Update submit button state
+    if (queryInput.value) {
+        submitBtn.disabled = false;
+        // Move cursor to end
+        const len = queryInput.value.length;
+        queryInput.setSelectionRange(len, len);
     }
 }

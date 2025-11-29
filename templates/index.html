@@ -8,7 +8,9 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- CSS -->
@@ -19,61 +21,50 @@
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-top">
-                <div class="sidebar-header">
-                    <button id="newChatBtn" class="btn-sidebar-auth" onclick="resetChat()">
-                        <i class="fa-solid fa-plus"></i> New Chat
-                    </button>
-                    <button id="sidebarToggle" class="btn-icon-sidebar" title="Close sidebar">
-                        <i class="fa-solid fa-bars-staggered"></i>
-                    </button>
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <i class="fa-solid fa-atom logo-icon"></i>
+                    <span class="logo-text">NEXUS AI</span>
                 </div>
-
-                <nav class="sidebar-nav">
-                    <button class="nav-item active">
-                        <i class="fa-solid fa-sparkles"></i>
-                        <span>AI Assistant</span>
-                    </button>
-                    <button class="nav-item">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <span>Search</span>
-                    </button>
-                    <button class="nav-item">
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span>Projects</span>
-                    </button>
-                </nav>
-
-                <div class="sidebar-section">
-                    <div class="section-title">Recent Chats</div>
-                </div>
+                <button id="newChatBtn" class="btn-new-chat" onclick="resetChat()">
+                    <i class="fa-solid fa-plus"></i> New Protocol
+                </button>
             </div>
 
-            <div class="sidebar-middle" id="chatHistoryList">
-                <!-- Chat history items will be injected here -->
-            </div>
+            <nav class="nav-section">
+                <div class="section-title">Modules</div>
+                <button class="nav-item active">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>Command Center</span>
+                </button>
+                <button class="nav-item">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Data Archives</span>
+                </button>
 
-            <div class="sidebar-bottom">
-                <div class="user-profile" id="userInfoSection">
-                    <div class="user-avatar">
-                        <i class="fa-regular fa-user"></i>
-                    </div>
-                    <div class="user-info" id="userInfo">
-                        <div class="user-name" id="usernameDisplay">Guest</div>
-                        <div class="user-plan">Free Plan</div>
-                    </div>
-                    <!-- Auth Buttons -->
-                    <div class="auth-buttons" style="width: 100%;">
-                        <button id="loginBtn" class="btn-sidebar-auth">Log in</button>
-                        <button id="registerBtn" class="btn-sidebar-auth"
-                            style="background: transparent; border: 1px solid var(--sidebar-border); margin-top: 0.5rem;">Sign
-                            up</button>
-                    </div>
-                    <button id="logoutBtn" class="btn-icon-sidebar" title="Log out"
-                        style="display: none; margin-left: auto;">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
+                <div class="section-title">History Logs</div>
+                <div id="chatHistoryList">
+                    <!-- Chat history items will be injected here -->
                 </div>
+            </nav>
+
+            <div class="user-profile" id="userInfoSection">
+                <div class="user-avatar">
+                    <span>OP</span>
+                </div>
+                <div class="user-info" id="userInfo">
+                    <div class="user-name" id="usernameDisplay">Operator</div>
+                    <div class="user-status">Online</div>
+                </div>
+                <!-- Auth Buttons -->
+                <div class="auth-buttons" style="display: none; width: 100%;" id="authButtons">
+                    <button id="loginBtn" class="btn-primary" style="margin-bottom: 0.5rem;">Initialize</button>
+                    <button id="registerBtn" class="btn-primary" style="background: transparent;">Register Unit</button>
+                </div>
+                <button id="logoutBtn" class="btn-icon" title="Terminate Session"
+                    style="display: none; margin-left: auto;">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
             </div>
         </aside>
 
@@ -84,22 +75,63 @@
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <div class="model-selector">
-                    <span>GPT-4o</span>
-                    <i class="fa-solid fa-chevron-down"></i>
+                    <span>MODEL: GPT-4o</span>
+                    <i class="fa-solid fa-caret-down"></i>
                 </div>
                 <div class="top-actions">
-                    <button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
+                    <button class="btn-icon"><i class="fa-solid fa-bell"></i></button>
                 </div>
             </header>
 
-            <!-- Landing View (Centered) -->
+            <!-- Landing View (Features Dashboard) -->
             <div class="landing-view" id="landingView">
-                <div class="logo-container">
-                    <div class="gpt-logo">
-                        <i class="fa-solid fa-bolt"></i>
+                <div class="landing-header">
+                    <h1>SYSTEM ONLINE</h1>
+                    <p>Select a module to initialize protocol.</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card" data-action="voice">
+                        <i class="fa-solid fa-microphone-lines feature-icon"></i>
+                        <h3 class="feature-title">Voice Command</h3>
+                        <p class="feature-desc">Natural language processing active.</p>
+                    </div>
+                    <div class="feature-card" data-action="search">
+                        <i class="fa-solid fa-globe feature-icon"></i>
+                        <h3 class="feature-title">Smart Search</h3>
+                        <p class="feature-desc">Global network indexing.</p>
+                    </div>
+                    <div class="feature-card" data-action="text">
+                        <i class="fa-solid fa-pen-to-square feature-icon"></i>
+                        <h3 class="feature-title">Text Gen</h3>
+                        <p class="feature-desc">Advanced linguistic synthesis.</p>
+                    </div>
+                    <div class="feature-card" data-action="image">
+                        <i class="fa-solid fa-image feature-icon"></i>
+                        <h3 class="feature-title">Image Gen</h3>
+                        <p class="feature-desc">Visual data construction.</p>
+                    </div>
+                    <div class="feature-card" data-action="code">
+                        <i class="fa-solid fa-code feature-icon"></i>
+                        <h3 class="feature-title">Code Assist</h3>
+                        <p class="feature-desc">Algorithm optimization.</p>
+                    </div>
+                    <div class="feature-card" data-action="automation">
+                        <i class="fa-solid fa-robot feature-icon"></i>
+                        <h3 class="feature-title">Automation</h3>
+                        <p class="feature-desc">Task sequence execution.</p>
+                    </div>
+                    <div class="feature-card" data-action="knowledge">
+                        <i class="fa-solid fa-database feature-icon"></i>
+                        <h3 class="feature-title">Knowledge</h3>
+                        <p class="feature-desc">Archive retrieval system.</p>
+                    </div>
+                    <div class="feature-card" data-action="settings">
+                        <i class="fa-solid fa-sliders feature-icon"></i>
+                        <h3 class="feature-title">Settings</h3>
+                        <p class="feature-desc">System configuration.</p>
                     </div>
                 </div>
-                <h1>How can I help you today?</h1>
             </div>
 
             <!-- Chat Stream (Hidden initially) -->
@@ -111,28 +143,30 @@
             <div class="input-area-container">
                 <div class="input-area">
                     <form class="query-form" id="queryForm">
-                        <button type="button" class="btn-attach" title="Attach image">
-                            <i class="fa-solid fa-paperclip"></i>
-                        </button>
-                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                        <textarea id="queryInput" placeholder="Message AI..." rows="1"></textarea>
-                        <button type="submit" class="btn-send" id="submitBtn" disabled>
-                            <i class="fa-solid fa-arrow-up"></i>
-                        </button>
-                    </form>
-                    <div class="input-container">
-                        <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
-                            <img id="imagePreview" src="" alt="Preview">
-                            <button id="removeImageBtn" class="remove-image-btn"><i
-                                    class="fa-solid fa-xmark"></i></button>
+                        <div class="input-wrapper">
+                            <button type="button" class="btn-icon" id="btnAttach" title="Upload Data">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <textarea id="queryInput" placeholder="Enter command sequence..." rows="1"></textarea>
+                            <button type="submit" class="btn-send" id="submitBtn" disabled>
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
                         </div>
+                    </form>
 
+                    <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
+                        <img id="imagePreview" src="" alt="Preview">
+                        <button id="removeImageBtn" class="remove-image-btn"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="input-container">
                         <label class="footer-toggle">
                             <input type="checkbox" id="generateAnswer" checked>
-                            <span>Web Search</span>
+                            <span>NET_SEARCH</span>
                         </label>
-                        <div class="k-input-wrapper" title="Number of chunks">
-                            <span>Sources:</span>
+                        <div class="k-input-wrapper" title="Data Chunks">
+                            <span>SOURCES:</span>
                             <input type="number" id="kInput" value="4" min="1" max="20">
                         </div>
                     </div>
@@ -145,7 +179,7 @@
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeLoginModal">&times;</span>
-            <h2>Welcome back</h2>
+            <h2>Identify</h2>
             <form id="loginForm">
                 <div class="form-group">
                     <input type="text" name="loginUsername" placeholder="Username" required>
@@ -154,7 +188,7 @@
                     <input type="password" name="loginPassword" placeholder="Password" required>
                 </div>
                 <div id="loginError" class="error-message"></div>
-                <button type="submit" class="btn-primary">Continue</button>
+                <button type="submit" class="btn-primary">Access</button>
             </form>
         </div>
     </div>
@@ -162,7 +196,7 @@
     <div id="registerModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeRegisterModal">&times;</span>
-            <h2>Create your account</h2>
+            <h2>New Unit</h2>
             <form id="registerForm">
                 <div class="form-group">
                     <input type="text" name="registerUsername" placeholder="Username" required>
@@ -174,7 +208,7 @@
                     <input type="password" name="registerPassword" placeholder="Password" required>
                 </div>
                 <div id="registerError" class="error-message"></div>
-                <button type="submit" class="btn-primary">Continue</button>
+                <button type="submit" class="btn-primary">Initialize</button>
             </form>
         </div>
     </div>
