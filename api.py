@@ -1,5 +1,5 @@
 # FastAPI Backend for RAG System
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
@@ -316,14 +316,14 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="Username or email already registered"
             )
         
         # Validate password length
         if len(user_data.password) < 6:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="Password must be at least 6 characters long"
             )
         
@@ -332,7 +332,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
             hashed_password = get_password_hash(user_data.password)
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to hash password: {str(e)}"
             )
         
@@ -349,7 +349,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         except Exception as e:
             db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create user: {str(e)}"
             )
         
@@ -363,7 +363,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
         )
 
@@ -375,7 +375,7 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     
     if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -445,7 +445,7 @@ async def delete_chat_history(
     
     if not chat:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="Chat history not found"
         )
     

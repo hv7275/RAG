@@ -1,182 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG System - Query Interface</title>
+    <title>ChatGPT</title>
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
-    <div class="background-blobs">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
-
     <div class="app-container">
-        <header class="glass-header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <div class="logo-icon">
-                        <i class="fa-solid fa-magnifying-glass-chart"></i>
-                    </div>
-                    <div>
-                        <h1>RAG System</h1>
-                        <p class="subtitle">Intelligent Video/Audio Analysis</p>
-                    </div>
-                </div>
-                <div class="auth-section" id="authSection">
-                    <div class="user-info" id="userInfo" style="display: none;">
-                        <span class="user-greeting"><i class="fa-regular fa-user"></i> <span id="usernameDisplay"></span></span>
-                        <button class="btn btn-glass btn-sm" id="chatHistoryBtn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
-                        <button class="btn btn-glass btn-sm btn-danger-glass" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-                    </div>
-                    <div class="auth-buttons" id="authButtons">
-                        <button class="btn btn-glass btn-sm" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
-                        <button class="btn btn-primary btn-sm" id="registerBtn"><i class="fa-solid fa-user-plus"></i> Register</button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="status-bar glass-panel" id="statusBar">
-            <div class="status-item">
-                <span class="status-label"><i class="fa-solid fa-server"></i> System Status</span>
-                <span class="status-value" id="statusValue">Checking...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label"><i class="fa-solid fa-database"></i> Indexed Chunks</span>
-                <span class="status-value" id="chunkCount">-</span>
-            </div>
-        </div>
-
-        <main>
-            <div class="query-section glass-panel">
-                <form id="queryForm">
-                    <div class="form-group">
-                        <label for="queryInput"><i class="fa-solid fa-message"></i> Your Query</label>
-                        <div class="input-wrapper">
-                            <textarea 
-                                id="queryInput" 
-                                name="query" 
-                                rows="3" 
-                                placeholder="Ask something about your video or audio content..."
-                                required
-                            ></textarea>
-                            <div class="focus-border"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-options">
-                        <div class="form-group-inline">
-                            <label for="kInput" title="Number of chunks to retrieve">Top Results (K)</label>
-                            <input type="number" id="kInput" name="k" value="4" min="1" max="20">
-                        </div>
-                        
-                        <div class="form-group-inline toggle-wrapper">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="generateAnswer" name="generate_answer" checked>
-                                <span class="slider round"></span>
-                            </label>
-                            <span class="toggle-label">Generate AI Answer</span>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
-                        <span class="btn-text"><i class="fa-solid fa-paper-plane"></i> Search & Generate</span>
-                        <span class="btn-loader" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i> Processing...</span>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-top">
+                <div class="sidebar-header">
+                    <button id="sidebarToggle" class="btn-icon-sidebar" title="Close sidebar">
+                        <i class="fa-solid fa-bars-staggered"></i>
                     </button>
-                </form>
+                    <button id="newChatBtn" class="btn-icon-sidebar" title="New chat">
+                        <i class="fa-regular fa-pen-to-square"></i>
+                    </button>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <button class="nav-item active">
+                        <i class="fa-brands fa-microblog"></i>
+                        <span>ChatGPT 5.1</span>
+                        <i class="fa-solid fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>Search chats</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Library</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fa-solid fa-shapes"></i>
+                        <span>GPTs</span>
+                    </button>
+                </nav>
+
+                <div class="sidebar-section">
+                    <div class="section-title">Projects</div>
+                    <button class="nav-item">
+                        <i class="fa-regular fa-folder-open"></i>
+                        <span>New project</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fa-regular fa-folder"></i>
+                        <span>e-com site</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="results-section" id="resultsSection" style="display: none;">
-                <div class="answer-section glass-panel" id="answerSection">
-                    <div class="answer-header">
-                        <h2><i class="fa-solid fa-robot"></i> AI Answer</h2>
-                        <button class="btn btn-glass btn-sm copy-btn" id="copyAnswerBtn" title="Copy answer">
-                            <span class="copy-icon"><i class="fa-regular fa-copy"></i></span>
-                            <span class="copy-text">Copy</span>
-                        </button>
+            <div class="sidebar-middle" id="chatHistoryList">
+                <div class="section-title">Your chats</div>
+                <!-- Chat history items will be injected here -->
+            </div>
+
+            <div class="sidebar-bottom">
+                <div class="user-profile" id="userProfileSection">
+                    <div class="user-avatar">HV</div>
+                    <div class="user-info">
+                        <span class="username" id="usernameDisplay">Guest</span>
+                        <span class="user-plan">Free Plan</span>
                     </div>
-                    <div class="answer-content" id="answerContent"></div>
                 </div>
-
-                <div class="chunks-section">
-                    <h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Source Context</h2>
-                    <div class="chunks-list" id="chunksList"></div>
+                <div class="auth-buttons" id="authButtons" style="display: none;">
+                    <button id="loginBtn" class="btn-sidebar-auth">Log in</button>
+                    <button id="registerBtn" class="btn-sidebar-auth">Sign up</button>
                 </div>
             </div>
+        </aside>
 
-            <div class="error-section glass-panel" id="errorSection" style="display: none;">
-                <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="error-message" id="errorMessage"></div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar (Mobile/Desktop) -->
+            <header class="top-bar">
+                <button id="mobileSidebarToggle" class="btn-icon">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="model-selector">
+                    <span>ChatGPT 5.1</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="top-actions">
+                    <button class="btn-icon"><i class="fa-regular fa-user"></i></button>
+                </div>
+            </header>
+
+            <!-- Landing View (Centered) -->
+            <div class="landing-view" id="landingView">
+                <div class="logo-container">
+                    <div class="gpt-logo">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                </div>
+                <h1>What can I help with?</h1>
+            </div>
+
+            <!-- Chat Stream (Hidden initially) -->
+            <div class="chat-stream" id="chatStream" style="display: none;">
+                <!-- Messages will be appended here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area-container" id="inputContainer">
+                <div class="input-area">
+                    <form id="queryForm" class="query-form">
+                        <button type="button" class="btn-attach" title="Attach file">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <textarea id="queryInput" placeholder="Ask anything" rows="1"></textarea>
+                        <div class="input-actions">
+                            <button type="button" class="btn-voice" title="Use voice">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <button type="submit" id="submitBtn" class="btn-send" disabled>
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="input-footer">
+                        <div class="settings-toggles">
+                            <label class="toggle-switch" title="Generate AI Answer">
+                                <input type="checkbox" id="generateAnswer" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <div class="k-input-wrapper" title="Number of chunks">
+                                <span>K:</span>
+                                <input type="number" id="kInput" value="4" min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
+    </div>
 
-        <!-- Login Modal -->
-        <div class="modal" id="loginModal">
-            <div class="modal-content glass-modal">
-                <span class="close" id="closeLoginModal">&times;</span>
-                <h2><i class="fa-solid fa-right-to-bracket"></i> Welcome Back</h2>
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label for="loginUsername">Username</label>
-                        <input type="text" id="loginUsername" name="username" required placeholder="Enter your username">
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" required placeholder="Enter your password">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Login</button>
-                </form>
-                <div class="error-message-box" id="loginError" style="display: none;"></div>
-            </div>
+    <!-- Modals -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeLoginModal">&times;</span>
+            <h2>Welcome back</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" name="loginUsername" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="loginPassword" placeholder="Password" required>
+                </div>
+                <div id="loginError" class="error-message"></div>
+                <button type="submit" class="btn-primary btn-block">Continue</button>
+            </form>
         </div>
+    </div>
 
-        <!-- Register Modal -->
-        <div class="modal" id="registerModal">
-            <div class="modal-content glass-modal">
-                <span class="close" id="closeRegisterModal">&times;</span>
-                <h2><i class="fa-solid fa-user-plus"></i> Create Account</h2>
-                <form id="registerForm">
-                    <div class="form-group">
-                        <label for="registerUsername">Username</label>
-                        <input type="text" id="registerUsername" name="username" required placeholder="Choose a username">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" name="email" required placeholder="Enter your email">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" name="password" required placeholder="Choose a strong password">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Register</button>
-                </form>
-                <div class="error-message-box" id="registerError" style="display: none;"></div>
-            </div>
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeRegisterModal">&times;</span>
+            <h2>Create your account</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <input type="text" name="registerUsername" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="registerEmail" placeholder="Email address" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="registerPassword" placeholder="Password" required>
+                </div>
+                <div id="registerError" class="error-message"></div>
+                <button type="submit" class="btn-primary btn-block">Continue</button>
+            </form>
         </div>
-
-        <!-- Chat History Modal -->
-        <div class="modal" id="chatHistoryModal">
-            <div class="modal-content glass-modal modal-large">
-                <span class="close" id="closeChatHistoryModal">&times;</span>
-                <h2><i class="fa-solid fa-clock-rotate-left"></i> Chat History</h2>
-                <div id="chatHistoryList" class="chat-history-list"></div>
-            </div>
-        </div>
-
-        <footer class="glass-footer">
-            <button class="btn btn-glass btn-sm" id="rebuildBtn"><i class="fa-solid fa-rotate"></i> Rebuild Index</button>
-            <p class="footer-text">RAG System v2.0.0 &copy; 2025</p>
-        </footer>
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
-</html>
 
+</html>

@@ -1,0 +1,8 @@
+DEBUG: Login attempt for nonexistent_user_12345
+DEBUG: User found: None
+DEBUG: User is None, raising 401
+DEBUG: Login attempt for nonexistent_user_12345
+DEBUG: User found: None
+DEBUG: User is None, raising 401
+DEBUG: Login attempt for nonexistent_user_12345
+DEBUG: User found: None

@@ -1,43 +1,71 @@
-// RAG System Frontend JavaScript
+// RAG System Frontend JavaScript - High Fidelity ChatGPT Replica
 const API_BASE = '';
 
 // Check authentication status on page load
 document.addEventListener('DOMContentLoaded', function () {
     checkStatus();
     checkAuthStatus();
+    loadChatHistory();
+
+    // Sidebar Toggle
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('active');
+    }
+
+    if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+    if (mobileSidebarToggle) mobileSidebarToggle.addEventListener('click', toggleSidebar);
+
+    // New Chat Button
+    document.getElementById('newChatBtn').addEventListener('click', resetChat);
+
+    // Auto-expand textarea
+    const queryInput = document.getElementById('queryInput');
+    const submitBtn = document.getElementById('submitBtn');
+
+    queryInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        if (this.value === '') this.style.height = 'auto';
+
+        // Enable/Disable submit button
+        submitBtn.disabled = this.value.trim() === '';
+    });
+
+    // Submit on Enter (Shift+Enter for newline)
+    queryInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim() !== '') {
+                handleQuery(e);
+            }
+        }
+    });
 
     // Query form submission
     document.getElementById('queryForm').addEventListener('submit', handleQuery);
 
-    // Rebuild button
-    document.getElementById('rebuildBtn').addEventListener('click', handleRebuild);
+    // Auth Buttons
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
 
-    // Copy answer button
-    document.getElementById('copyAnswerBtn').addEventListener('click', copyAnswer);
-
-    // Authentication buttons
-    document.getElementById('loginBtn').addEventListener('click', () => showModal('loginModal'));
-    document.getElementById('registerBtn').addEventListener('click', () => showModal('registerModal'));
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    document.getElementById('chatHistoryBtn').addEventListener('click', () => {
-        showModal('chatHistoryModal');
-        loadChatHistory();
-    });
+    if (loginBtn) loginBtn.addEventListener('click', () => showModal('loginModal'));
+    if (registerBtn) registerBtn.addEventListener('click', () => showModal('registerModal'));
 
     // Modal close buttons
     document.getElementById('closeLoginModal').addEventListener('click', () => hideModal('loginModal'));
     document.getElementById('closeRegisterModal').addEventListener('click', () => hideModal('registerModal'));
-    document.getElementById('closeChatHistoryModal').addEventListener('click', () => hideModal('chatHistoryModal'));
 
-    // Login form
+    // Login/Register forms
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
-
-    // Register form
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
 
     // Close modal when clicking outside
     window.addEventListener('click', function (event) {
-        const modals = ['loginModal', 'registerModal', 'chatHistoryModal'];
+        const modals = ['loginModal', 'registerModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);
             if (event.target === modal) {
@@ -47,23 +75,24 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+function resetChat() {
+    document.getElementById('landingView').style.display = 'flex';
+    document.getElementById('chatStream').style.display = 'none';
+    document.getElementById('chatStream').innerHTML = '';
+
+    // Reset input position by ensuring landing view is visible
+    // CSS handles the positioning based on landing view visibility
+}
+
+function switchToChatMode() {
+    document.getElementById('landingView').style.display = 'none';
+    document.getElementById('chatStream').style.display = 'block';
+}
+
 async function checkStatus() {
     try {
-        const response = await fetch(`${API_BASE}/status`);
-        const data = await response.json();
-
-        if (data.embeddings_loaded || data.index_exists) {
-            document.getElementById('statusValue').textContent = 'Ready';
-            document.getElementById('statusValue').style.color = '#28a745';
-            document.getElementById('chunkCount').textContent = data.total_chunks || 0;
-        } else {
-            document.getElementById('statusValue').textContent = 'Not Ready';
-            document.getElementById('statusValue').style.color = '#dc3545';
-            document.getElementById('chunkCount').textContent = '0';
-        }
+        await fetch(`${API_BASE}/status`);
     } catch (error) {
-        document.getElementById('statusValue').textContent = 'Error';
-        document.getElementById('statusValue').style.color = '#dc3545';
         console.error('Status check failed:', error);
     }
 }
@@ -77,16 +106,13 @@ async function checkAuthStatus() {
 
     try {
         const response = await fetch(`${API_BASE}/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
             const user = await response.json();
             showUserInfo(user);
         } else {
-            // Token invalid or expired
             localStorage.removeItem('access_token');
             showAuthButtons();
         }
@@ -97,34 +123,34 @@ async function checkAuthStatus() {
 }
 
 async function handleQuery(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     const queryInput = document.getElementById('queryInput');
     const kInput = document.getElementById('kInput');
     const generateAnswer = document.getElementById('generateAnswer');
     const submitBtn = document.getElementById('submitBtn');
-    const resultsSection = document.getElementById('resultsSection');
-    const errorSection = document.getElementById('errorSection');
 
     const query = queryInput.value.trim();
-    if (!query) {
-        showError('Please enter a query');
-        return;
-    }
+    if (!query) return;
 
-    // Show loading state
+    // Switch UI to chat mode
+    switchToChatMode();
+
+    // Append User Message
+    appendUserMessage(query);
+
+    // Clear input and reset height
+    queryInput.value = '';
+    queryInput.style.height = 'auto';
     submitBtn.disabled = true;
-    submitBtn.querySelector('.btn-text').style.display = 'none';
-    submitBtn.querySelector('.btn-loader').style.display = 'inline';
-    resultsSection.style.display = 'none';
-    errorSection.style.display = 'none';
+
+    // Show Loading
+    const loadingId = appendLoadingMessage();
 
     try {
         const response = await fetch(`${API_BASE}/query`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 query: query,
                 k: parseInt(kInput.value),
@@ -135,158 +161,151 @@ async function handleQuery(e) {
 
         const data = await response.json();
 
+        // Remove loading message
+        removeMessage(loadingId);
+
         if (response.ok) {
-            displayResults(data);
+            appendAIMessage(data);
+            loadChatHistory();
         } else {
-            showError(data.error || 'Query failed');
+            appendErrorMessage(data.error || 'Query failed');
         }
     } catch (error) {
-        showError(`Request failed: ${error.message}`);
-    } finally {
-        // Reset button state
-        submitBtn.disabled = false;
-        submitBtn.querySelector('.btn-text').style.display = 'inline';
-        submitBtn.querySelector('.btn-loader').style.display = 'none';
+        removeMessage(loadingId);
+        appendErrorMessage(`Request failed: ${error.message}`);
     }
 }
 
-function displayResults(data) {
-    const resultsSection = document.getElementById('resultsSection');
-    const answerSection = document.getElementById('answerSection');
-    const answerContent = document.getElementById('answerContent');
-    const chunksList = document.getElementById('chunksList');
-    const errorSection = document.getElementById('errorSection');
+function appendUserMessage(text) {
+    const chatStream = document.getElementById('chatStream');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message user-message';
+    msgDiv.innerHTML = `
+        <div class="message-content"><p>${escapeHtml(text)}</p></div>
+    `;
+    chatStream.appendChild(msgDiv);
+    chatStream.scrollTop = chatStream.scrollHeight;
+}
 
-    // Hide error section
-    errorSection.style.display = 'none';
+function appendLoadingMessage() {
+    const chatStream = document.getElementById('chatStream');
+    const msgDiv = document.createElement('div');
+    const id = 'loading-' + Date.now();
+    msgDiv.id = id;
+    msgDiv.className = 'message ai-message';
+    msgDiv.innerHTML = `
+        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+        <div class="message-content">
+            <p><i class="fa-solid fa-circle-notch fa-spin"></i></p>
+        </div>
+    `;
+    chatStream.appendChild(msgDiv);
+    chatStream.scrollTop = chatStream.scrollHeight;
+    return id;
+}
 
-    // Display answer if available
-    if (data.answer && data.answer.trim() !== '') {
-        answerContent.textContent = data.answer;
-        answerSection.style.display = 'block';
+function removeMessage(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function appendAIMessage(data) {
+    const chatStream = document.getElementById('chatStream');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message ai-message';
+
+    let content = '';
+    if (data.answer) {
+        content += `<p>${escapeHtml(data.answer)}</p>`;
     } else {
-        answerSection.style.display = 'none';
+        content += `<p>No answer generated.</p>`;
     }
 
-    // Display chunks
+    // Sources Accordion (Styled minimally)
     if (data.chunks && data.chunks.length > 0) {
-        chunksList.innerHTML = data.chunks.map((chunk, index) => `
-            <div class="chunk-card">
-                <div class="chunk-header">
-                    <div class="chunk-title">${escapeHtml(chunk.title)}</div>
-                    <div class="chunk-header-right">
-                        <div class="chunk-meta">
-                            ${chunk.start ? `<span>Start: ${escapeHtml(chunk.start)}</span>` : ''}
-                            ${chunk.end ? `<span>End: ${escapeHtml(chunk.end)}</span>` : ''}
-                            <span class="chunk-score">Score: ${chunk.score.toFixed(3)}</span>
-                        </div>
-                        <button class="btn btn-glass btn-sm copy-chunk-btn" data-chunk-index="${index}" title="Copy this chunk to clipboard">
-                            <span class="copy-icon"><i class="fa-regular fa-copy"></i></span>
-                            <span class="copy-text">Copy</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="chunk-text" data-chunk-content="${index}">${escapeHtml(chunk.chunk)}</div>
+        const sourcesHtml = data.chunks.map(chunk => `
+            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.title)}</div>
+                <div style="font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.chunk)}</div>
             </div>
         `).join('');
 
-        // Add event listeners for chunk copy buttons
-        chunksList.querySelectorAll('.copy-chunk-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const chunkIndex = this.getAttribute('data-chunk-index');
-                const chunkContent = chunksList.querySelector(`[data-chunk-content="${chunkIndex}"]`);
-                copyChunkText(chunkContent.textContent, this);
-            });
-        });
-    } else {
-        chunksList.innerHTML = '<p>No chunks found.</p>';
+        content += `
+            <div style="margin-top: 1rem;">
+                <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: #b4b4b4; cursor: pointer; font-size: 0.8rem;">
+                    <i class="fa-solid fa-book"></i> ${data.chunks.length} Sources
+                </button>
+                <div style="display: none; margin-top: 0.5rem;">
+                    ${sourcesHtml}
+                </div>
+            </div>
+        `;
     }
 
-    // Show results section
-    resultsSection.style.display = 'block';
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    msgDiv.innerHTML = `
+        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+        <div class="message-content">${content}</div>
+    `;
+    chatStream.appendChild(msgDiv);
+    chatStream.scrollTop = chatStream.scrollHeight;
 }
 
-async function handleRebuild() {
-    if (!confirm('Are you sure you want to rebuild the index? This may take a while.')) {
-        return;
-    }
+function appendErrorMessage(text) {
+    const chatStream = document.getElementById('chatStream');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message ai-message';
+    msgDiv.innerHTML = `
+        <div class="message-avatar" style="border-color: var(--error-color); color: var(--error-color)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="message-content"><p style="color: var(--error-color)">${escapeHtml(text)}</p></div>
+    `;
+    chatStream.appendChild(msgDiv);
+    chatStream.scrollTop = chatStream.scrollHeight;
+}
 
-    const rebuildBtn = document.getElementById('rebuildBtn');
-    const originalText = rebuildBtn.innerHTML;
-    rebuildBtn.disabled = true;
-    rebuildBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Rebuilding...';
+async function loadChatHistory() {
+    const historyList = document.getElementById('chatHistoryList');
+    // Clear existing items but keep title
+    historyList.innerHTML = '<div class="section-title">Your chats</div>';
 
     try {
-        const response = await fetch(`${API_BASE}/rebuild_index`, {
-            method: 'POST'
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+
+        const response = await fetch(`${API_BASE}/chat-history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
 
         if (response.ok) {
-            alert(data.message || 'Index rebuilt successfully');
-            checkStatus();
-        } else {
-            alert('Error: ' + (data.error || 'Failed to rebuild index'));
+            const data = await response.json();
+            if (data.chats && data.chats.length > 0) {
+                data.chats.forEach(chat => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-item';
+                    btn.innerHTML = `<span>${escapeHtml(chat.query)}</span>`;
+                    historyList.appendChild(btn);
+                });
+            }
         }
     } catch (error) {
-        alert('Request failed: ' + error.message);
-    } finally {
-        rebuildBtn.disabled = false;
-        rebuildBtn.innerHTML = originalText;
+        console.error('Failed to load history:', error);
     }
-}
-
-function copyAnswer() {
-    const answerText = document.getElementById('answerContent').textContent;
-    const copyBtn = document.getElementById('copyAnswerBtn');
-    copyChunkText(answerText, copyBtn);
-}
-
-function copyChunkText(text, btnElement) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Visual feedback
-        const originalIcon = btnElement.querySelector('.copy-icon').innerHTML;
-        const originalText = btnElement.querySelector('.copy-text').textContent;
-
-        btnElement.classList.add('copied');
-        btnElement.querySelector('.copy-icon').innerHTML = '<i class="fa-solid fa-check"></i>';
-        btnElement.querySelector('.copy-text').textContent = 'Copied';
-
-        setTimeout(() => {
-            btnElement.classList.remove('copied');
-            btnElement.querySelector('.copy-icon').innerHTML = originalIcon;
-            btnElement.querySelector('.copy-text').textContent = originalText;
-        }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy text');
-    });
-}
-
-function showError(message) {
-    const errorSection = document.getElementById('errorSection');
-    const errorMessage = document.getElementById('errorMessage');
-    errorMessage.textContent = message;
-    errorSection.style.display = 'flex';
-    errorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showUserInfo(user) {
     if (user && user.username) {
-        document.getElementById('usernameDisplay').textContent = `Hello, ${user.username}`;
-        document.getElementById('userInfo').style.display = 'flex';
+        document.getElementById('usernameDisplay').textContent = user.username;
+        document.getElementById('userProfileSection').style.display = 'flex';
         document.getElementById('authButtons').style.display = 'none';
-        // Store token if provided
-        if (user.token) {
-            localStorage.setItem('access_token', user.token);
-        }
+
+        // Initials
+        const initials = user.username.substring(0, 2).toUpperCase();
+        document.querySelector('.user-avatar').textContent = initials;
     }
 }
 
 function showAuthButtons() {
-    document.getElementById('userInfo').style.display = 'none';
-    document.getElementById('authButtons').style.display = 'flex';
+    document.getElementById('userProfileSection').style.display = 'none';
+    document.getElementById('authButtons').style.display = 'block';
 }
 
 async function handleLogin(e) {
@@ -295,60 +314,29 @@ async function handleLogin(e) {
     const username = form.loginUsername.value.trim();
     const password = form.loginPassword.value;
     const errorDiv = document.getElementById('loginError');
-
-    // Clear previous errors
     errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-
-    // Basic validation
-    if (!username || !password) {
-        errorDiv.textContent = 'Please enter both username and password';
-        errorDiv.style.display = 'block';
-        return;
-    }
 
     try {
         const response = await fetch(`${API_BASE}/login`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
-
-        let data;
-        try {
-            data = await response.json();
-        } catch (e) {
-            data = { detail: response.statusText || 'Login failed' };
-        }
+        const data = await response.json();
 
         if (response.ok) {
-            // Store token if provided
-            if (data.access_token) {
-                localStorage.setItem('access_token', data.access_token);
-            }
-            // Store user info
-            if (data.user) {
-                hideModal('loginModal');
-                showUserInfo(data.user);
-                form.reset();
-                errorDiv.style.display = 'none';
-            } else {
-                errorDiv.textContent = 'Login successful but user data not received';
-                errorDiv.style.display = 'block';
-            }
+            if (data.access_token) localStorage.setItem('access_token', data.access_token);
+            hideModal('loginModal');
+            if (data.user) showUserInfo(data.user);
+            form.reset();
+            loadChatHistory();
         } else {
-            // Show detailed error message
-            const errorMsg = data.detail || data.error || `Login failed (${response.status})`;
-            errorDiv.textContent = errorMsg;
+            errorDiv.textContent = data.detail || 'Login failed';
             errorDiv.style.display = 'block';
-            console.error('Login error:', data);
         }
     } catch (error) {
-        errorDiv.textContent = 'Login failed: ' + error.message + '. Please check if the API server is running.';
+        errorDiv.textContent = 'Login failed: ' + error.message;
         errorDiv.style.display = 'block';
-        console.error('Login exception:', error);
     }
 }
 
@@ -359,135 +347,36 @@ async function handleRegister(e) {
     const email = form.registerEmail.value.trim();
     const password = form.registerPassword.value;
     const errorDiv = document.getElementById('registerError');
-
-    // Clear previous errors
     errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-
-    // Basic validation
-    if (!username || !email || !password) {
-        errorDiv.textContent = 'Please fill in all fields';
-        errorDiv.style.display = 'block';
-        return;
-    }
-
-    if (password.length < 6) {
-        errorDiv.textContent = 'Password must be at least 6 characters long';
-        errorDiv.style.display = 'block';
-        return;
-    }
 
     try {
         const response = await fetch(`${API_BASE}/register`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, email, password })
         });
-
-        let data;
-        try {
-            data = await response.json();
-        } catch (e) {
-            data = { detail: response.statusText || 'Registration failed' };
-        }
+        const data = await response.json();
 
         if (response.ok) {
-            // Auto login after registration
-            const loginResponse = await fetch(`${API_BASE}/login`, {
+            const loginResp = await fetch(`${API_BASE}/login`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
-
-            if (loginResponse.ok) {
-                const loginData = await loginResponse.json();
-                // Store token if provided
-                if (loginData.access_token) {
-                    localStorage.setItem('access_token', loginData.access_token);
-                }
+            if (loginResp.ok) {
+                const loginData = await loginResp.json();
+                localStorage.setItem('access_token', loginData.access_token);
                 hideModal('registerModal');
-                if (loginData.user) {
-                    showUserInfo(loginData.user);
-                } else {
-                    showUserInfo({ username: username, token: loginData.access_token });
-                }
-                form.reset();
-                errorDiv.style.display = 'none';
-            } else {
-                // Registration succeeded but login failed
-                errorDiv.textContent = 'Registration successful, but login failed. Please try logging in manually.';
-                errorDiv.style.display = 'block';
+                showUserInfo(loginData.user);
+                loadChatHistory();
             }
         } else {
-            // Show detailed error message
-            const errorMsg = data.detail || data.error || `Registration failed (${response.status})`;
-            errorDiv.textContent = errorMsg;
+            errorDiv.textContent = data.detail || 'Registration failed';
             errorDiv.style.display = 'block';
-            console.error('Registration error:', data);
         }
     } catch (error) {
-        errorDiv.textContent = 'Registration failed: ' + error.message + '. Please check if the API server is running.';
+        errorDiv.textContent = 'Error: ' + error.message;
         errorDiv.style.display = 'block';
-        console.error('Registration exception:', error);
-    }
-}
-
-async function handleLogout() {
-    try {
-        await fetch(`${API_BASE}/logout`, {
-            method: 'POST'
-        });
-        // Clear token from localStorage
-        localStorage.removeItem('access_token');
-        showAuthButtons();
-    } catch (error) {
-        console.error('Logout failed:', error);
-        // Clear token anyway
-        localStorage.removeItem('access_token');
-        showAuthButtons();
-    }
-}
-
-async function loadChatHistory() {
-    const chatHistoryList = document.getElementById('chatHistoryList');
-    chatHistoryList.innerHTML = '<p>Loading chat history...</p>';
-
-    try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-            chatHistoryList.innerHTML = '<p>Please login to view chat history.</p>';
-            return;
-        }
-
-        const response = await fetch(`${API_BASE}/chat-history`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.chats && data.chats.length > 0) {
-                chatHistoryList.innerHTML = data.chats.map(chat => `
-                    <div class="chat-history-item">
-                        <div class="chat-history-item-header">
-                            <div class="chat-history-item-date">${new Date(chat.created_at).toLocaleString()}</div>
-                        </div>
-                        <div class="chat-history-item-query">${escapeHtml(chat.query)}</div>
-                        <div class="chat-history-item-answer">${escapeHtml(chat.answer || 'No answer generated')}</div>
-                    </div>
-                `).join('');
-            } else {
-                chatHistoryList.innerHTML = '<p>No chat history found.</p>';
-            }
-        } else {
-            chatHistoryList.innerHTML = '<p>Failed to load chat history. Please login again.</p>';
-        }
-    } catch (error) {
-        chatHistoryList.innerHTML = '<p>Error loading chat history: ' + error.message + '</p>';
     }
 }
 
