@@ -24,7 +24,7 @@
                     <button id="sidebarToggle" class="btn-icon-sidebar" title="Close sidebar">
                         <i class="fa-solid fa-bars-staggered"></i>
                     </button>
-                    <button id="newChatBtn" class="btn-icon-sidebar" title="New chat">
+                    <button id="newChatBtn" class="btn-icon-sidebar" title="New chat" onclick="resetChat()">
                         <i class="fa-regular fa-pen-to-square"></i>
                     </button>
                 </div>
@@ -68,23 +68,31 @@
             </div>
 
             <div class="sidebar-bottom">
-                <div class="user-profile" id="userProfileSection">
-                    <div class="user-avatar">HV</div>
-                    <div class="user-info">
-                        <span class="username" id="usernameDisplay">Guest</span>
-                        <span class="user-plan">Free Plan</span>
+                <div class="user-profile" id="userInfoSection">
+                    <div class="user-avatar">
+                        <i class="fa-regular fa-user"></i>
                     </div>
-                </div>
-                <div class="auth-buttons" id="authButtons" style="display: none;">
-                    <button id="loginBtn" class="btn-sidebar-auth">Log in</button>
-                    <button id="registerBtn" class="btn-sidebar-auth">Sign up</button>
+                    <div class="user-info" id="userInfo">
+                        <div class="user-name" id="usernameDisplay">Guest</div>
+                        <div class="user-plan">Free Plan</div>
+                    </div>
+                    <!-- Auth Buttons -->
+                    <div class="auth-buttons" style="width: 100%;">
+                        <button id="loginBtn" class="btn-sidebar-auth">Log in</button>
+                        <button id="registerBtn" class="btn-sidebar-auth"
+                            style="background-color: transparent; border: 1px solid rgba(255,255,255,0.2); margin-top: 0.25rem;">Sign
+                            up</button>
+                    </div>
+                    <button id="logoutBtn" class="btn-icon-sidebar" title="Log out"
+                        style="display: none; margin-left: auto;">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
                 </div>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Top Bar (Mobile/Desktop) -->
             <header class="top-bar">
                 <button id="mobileSidebarToggle" class="btn-icon">
                     <i class="fa-solid fa-bars"></i>
@@ -110,16 +118,46 @@
 
             <!-- Chat Stream (Hidden initially) -->
             <div class="chat-stream" id="chatStream" style="display: none;">
-                </label>
-                <div class="k-input-wrapper" title="Number of chunks">
-                    <span>K:</span>
-                    <input type="number" id="kInput" value="4" min="1" max="20">
+                <!-- Messages will be injected here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area-container">
+                <div class="input-area">
+                    <div class="input-container">
+                        <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
+                            <img id="imagePreview" src="" alt="Preview">
+                            <button id="removeImageBtn" class="remove-image-btn"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                        </div>
+
+                        <form id="queryForm" class="query-form">
+                            <button type="button" class="btn-attach"><i class="fa-solid fa-paperclip"></i></button>
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+
+                            <textarea id="queryInput" placeholder="Message ChatGPT..." rows="1"></textarea>
+
+                            <button type="submit" id="submitBtn" class="btn-submit" disabled>
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="footer-text">
+                        <p>ChatGPT can make mistakes. Check important info.</p>
+                        <div class="footer-controls">
+                            <label class="footer-toggle">
+                                <input type="checkbox" id="generateAnswer" checked>
+                                <span>Generate Answer</span>
+                            </label>
+                            <div class="k-input-wrapper" title="Number of chunks">
+                                <span>K:</span>
+                                <input type="number" id="kInput" value="4" min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-    </div>
-    </div>
-    </div>
-    </main>
+        </main>
     </div>
 
     <!-- Modals -->

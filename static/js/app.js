@@ -20,7 +20,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (mobileSidebarToggle) mobileSidebarToggle.addEventListener('click', toggleSidebar);
 
     // New Chat Button
-    document.getElementById('newChatBtn').addEventListener('click', resetChat);
+    const newChatBtn = document.getElementById('newChatBtn');
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', resetChat);
+    }
 
     // Auto-expand textarea
     const queryInput = document.getElementById('queryInput');
@@ -103,17 +106,36 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+    // Logout Button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 });
 
 let selectedImageBase64 = null;
 
 function resetChat() {
+    console.log('Resetting chat...');
     document.getElementById('landingView').style.display = 'flex';
     document.getElementById('chatStream').style.display = 'none';
     document.getElementById('chatStream').innerHTML = '';
     selectedImageBase64 = null;
-    document.getElementById('imageInput').value = '';
-    document.getElementById('imagePreviewContainer').style.display = 'none';
+
+    const queryInput = document.getElementById('queryInput');
+    if (queryInput) {
+        queryInput.value = '';
+        queryInput.style.height = 'auto';
+    }
+
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) imageInput.value = '';
+
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) submitBtn.disabled = true;
 }
 
 function switchToChatMode() {
@@ -151,6 +173,82 @@ async function checkAuthStatus() {
     } catch (error) {
         console.error('Auth check failed:', error);
         showAuthButtons();
+    }
+}
+
+function showAuthButtons() {
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const userInfo = document.getElementById('userInfo');
+
+    if (loginBtn) loginBtn.style.display = 'block';
+    if (registerBtn) registerBtn.style.display = 'block';
+    if (userInfo) userInfo.style.display = 'none';
+}
+
+function showUserInfo(user) {
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+
+    if (loginBtn) loginBtn.parentElement.style.display = 'none'; // Hide auth container
+    if (logoutBtn) logoutBtn.style.display = 'block';
+
+    if (usernameDisplay) {
+        usernameDisplay.textContent = user.username;
+    }
+}
+
+async function loadChatHistory() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/chat-history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const chatHistoryList = document.getElementById('chatHistoryList');
+
+            // Clear existing items but keep title
+            chatHistoryList.innerHTML = '<div class="section-title">Your chats</div>';
+
+            if (data.chats && data.chats.length > 0) {
+                data.chats.forEach(chat => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-item';
+                    btn.style.width = '100%';
+                    btn.style.justifyContent = 'flex-start';
+                    btn.style.padding = '0.75rem 1rem';
+                    btn.innerHTML = `
+                        <i class="fa-regular fa-message"></i>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(chat.query)}</span>
+                    `;
+                    btn.addEventListener('click', () => loadChat(chat));
+                    chatHistoryList.appendChild(btn);
+                });
+            } else {
+                chatHistoryList.innerHTML += '<div style="padding: 1rem; color: #666; font-size: 0.9rem;">No history yet.</div>';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load history:', error);
+    }
+}
+
+function loadChat(chat) {
+    switchToChatMode();
+    const chatStream = document.getElementById('chatStream');
+    chatStream.innerHTML = ''; // Clear current view
+
+    // Append User Message
+    appendUserMessage(chat.query);
+
+    // Append AI Answer
+    if (chat.answer) {
+        appendAIMessage({ answer: chat.answer, chunks: [] }); // We don't have chunks in history summary
     }
 }
 
@@ -230,8 +328,8 @@ function appendUserMessage(text, imageBase64) {
     }
 
     msgDiv.innerHTML = `
-        <div class="message-content">${content}</div>
-    `;
+    <div class="message-content">${content}</div>
+`;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
 }
@@ -243,11 +341,11 @@ function appendLoadingMessage() {
     msgDiv.id = id;
     msgDiv.className = 'message ai-message';
     msgDiv.innerHTML = `
-        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
-        <div class="message-content">
-            <p><i class="fa-solid fa-circle-notch fa-spin"></i></p>
-        </div>
-    `;
+    <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+    <div class="message-content">
+        <p><i class="fa-solid fa-circle-notch fa-spin"></i></p>
+    </div>
+`;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
     return id;
@@ -273,28 +371,28 @@ function appendAIMessage(data) {
     // Sources Accordion (Styled minimally)
     if (data.chunks && data.chunks.length > 0) {
         const sourcesHtml = data.chunks.map(chunk => `
-            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                <div style="font-weight: 600; font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.title)}</div>
-                <div style="font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.chunk)}</div>
-            </div>
-        `).join('');
+        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 4px;">
+            <div style="font-weight: 600; font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.title)}</div>
+            <div style="font-size: 0.8rem; color: #b4b4b4;">${escapeHtml(chunk.chunk)}</div>
+        </div>
+    `).join('');
 
         content += `
-            <div style="margin-top: 1rem;">
-                <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: #b4b4b4; cursor: pointer; font-size: 0.8rem;">
-                    <i class="fa-solid fa-book"></i> ${data.chunks.length} Sources
-                </button>
-                <div style="display: none; margin-top: 0.5rem;">
-                    ${sourcesHtml}
-                </div>
+        <div style="margin-top: 1rem;">
+            <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'" style="background: none; border: none; color: #b4b4b4; cursor: pointer; font-size: 0.8rem;">
+                <i class="fa-solid fa-book"></i> ${data.chunks.length} Sources
+            </button>
+            <div style="display: none; margin-top: 0.5rem;">
+                ${sourcesHtml}
             </div>
-        `;
+        </div>
+    `;
     }
 
     msgDiv.innerHTML = `
-        <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
-        <div class="message-content">${content}</div>
-    `;
+    <div class="message-avatar"><i class="fa-solid fa-bolt"></i></div>
+    <div class="message-content">${content}</div>
+`;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
 }
@@ -304,57 +402,11 @@ function appendErrorMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message ai-message';
     msgDiv.innerHTML = `
-        <div class="message-avatar" style="border-color: var(--error-color); color: var(--error-color)"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <div class="message-content"><p style="color: var(--error-color)">${escapeHtml(text)}</p></div>
-    `;
+    <div class="message-avatar" style="border-color: var(--error-color); color: var(--error-color)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="message-content"><p style="color: var(--error-color)">${escapeHtml(text)}</p></div>
+`;
     chatStream.appendChild(msgDiv);
     chatStream.scrollTop = chatStream.scrollHeight;
-}
-
-async function loadChatHistory() {
-    const historyList = document.getElementById('chatHistoryList');
-    // Clear existing items but keep title
-    historyList.innerHTML = '<div class="section-title">Your chats</div>';
-
-    try {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
-
-        const response = await fetch(`${API_BASE}/chat-history`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.chats && data.chats.length > 0) {
-                data.chats.forEach(chat => {
-                    const btn = document.createElement('button');
-                    btn.className = 'nav-item';
-                    btn.innerHTML = `<span>${escapeHtml(chat.query)}</span>`;
-                    historyList.appendChild(btn);
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load history:', error);
-    }
-}
-
-function showUserInfo(user) {
-    if (user && user.username) {
-        document.getElementById('usernameDisplay').textContent = user.username;
-        document.getElementById('userProfileSection').style.display = 'flex';
-        document.getElementById('authButtons').style.display = 'none';
-
-        // Initials
-        const initials = user.username.substring(0, 2).toUpperCase();
-        document.querySelector('.user-avatar').textContent = initials;
-    }
-}
-
-function showAuthButtons() {
-    document.getElementById('userProfileSection').style.display = 'none';
-    document.getElementById('authButtons').style.display = 'block';
 }
 
 async function handleLogin(e) {
@@ -441,4 +493,20 @@ function showModal(modalId) {
 
 function hideModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
+}
+
+// Logout Logic moved to DOMContentLoaded
+async function handleLogout() {
+    try {
+        await fetch(`${API_BASE}/logout`, { method: 'POST' });
+    } catch (error) {
+        console.error('Logout failed:', error);
+    } finally {
+        localStorage.removeItem('access_token');
+        showAuthButtons();
+        resetChat();
+        // Clear chat history from view
+        const chatHistoryList = document.getElementById('chatHistoryList');
+        if (chatHistoryList) chatHistoryList.innerHTML = '<div class="section-title">Your chats</div>';
+    }
 }
