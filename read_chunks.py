@@ -371,7 +371,7 @@ def _pick_chat_candidates(models: List[Dict[str, Any]], exclude: str) -> List[st
     candidates.sort(key=lambda m: (0 if (m.get("size") or 0) > 0 else 1, m.get("size") or 0))
     return [m["name"] for m in candidates]
 
-def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = DEFAULT_GEN_MODEL):
+def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = DEFAULT_GEN_MODEL, images: List[str] = None):
     """
     Try /api/chat first; on 500, fallback to /api/generate.
     Adds useful debug on non-200s and prevents double '/api/chat/api/chat'.
@@ -398,6 +398,8 @@ def answer_via_ollama(prompt: str, url: str = DEFAULT_OLLAMA_URL, model: str = D
         "stream": False,
         "options": options,
     }
+    if images:
+        chat_payload["messages"][0]["images"] = images
 
     try:
         r = requests.post(chat_url, json=chat_payload, timeout=180)
@@ -601,7 +603,7 @@ def clean_answer(answer: str) -> str:
     return answer
 
 def generate_answer(query: str, df: pd.DataFrame, hits: List[int], max_ctx: int = 4000,
-                    gen_model: str = DEFAULT_GEN_MODEL, ollama_url: str = DEFAULT_OLLAMA_URL):
+                    gen_model: str = DEFAULT_GEN_MODEL, ollama_url: str = DEFAULT_OLLAMA_URL, images: List[str] = None):
     # Build the context rows *as dicts*; this fixes the 'string indices' TypeError
     ctx = [{"chunk_id": int(df.iloc[i]["chunk_id"]), "chunk": df.iloc[i]["chunk"]} for i in hits]
     prompt = build_prompt(query, ctx, max_ctx)
@@ -611,7 +613,7 @@ def generate_answer(query: str, df: pd.DataFrame, hits: List[int], max_ctx: int 
         print(f"[WARN] Prompt is very long ({len(prompt)} chars), may cause issues")
     
     try:
-        answer = answer_via_ollama(prompt, ollama_url, gen_model)
+        answer = answer_via_ollama(prompt, ollama_url, gen_model, images=images)
         # Clean the answer to remove unwanted prefixes and chunk IDs
         return clean_answer(answer)
     except Exception as e:

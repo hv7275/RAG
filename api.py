@@ -85,6 +85,7 @@ class QueryRequest(BaseModel):
     k: int = 6
     generate_answer: bool = True
     max_ctx: int = 8000
+    image: Optional[str] = None
 
 class ChunkResult(BaseModel):
     chunk_id: int
@@ -239,7 +240,8 @@ async def query(
                     hits,
                     request.max_ctx,
                     gen_model=gen_model,
-                    ollama_url=ollama_url
+                    ollama_url=ollama_url,
+                    images=[request.image] if request.image else None
                 )
             except Exception as e:
                 answer = f"Error generating answer: {str(e)}"
