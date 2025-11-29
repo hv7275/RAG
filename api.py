@@ -82,9 +82,9 @@ def get_embeddings():
 # Request/Response models
 class QueryRequest(BaseModel):
     query: str
-    k: int = 4
+    k: int = 6
     generate_answer: bool = True
-    max_ctx: int = 4000
+    max_ctx: int = 8000
 
 class ChunkResult(BaseModel):
     chunk_id: int

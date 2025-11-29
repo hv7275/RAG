@@ -37,8 +37,8 @@ MAX_CHARS_PER_TEXT = int(os.environ.get("MAX_CHARS_PER_TEXT", "4000"))
 INTER_BATCH_SLEEP = float(os.environ.get("INTER_BATCH_SLEEP", "0.15"))
 
 # Generation options (forwarded to Ollama via "options")
-GEN_NUM_CTX = int(os.environ.get("GEN_NUM_CTX", "2048"))
-GEN_NUM_PREDICT = int(os.environ.get("GEN_NUM_PREDICT", "256"))
+GEN_NUM_CTX = int(os.environ.get("GEN_NUM_CTX", "4096"))
+GEN_NUM_PREDICT = int(os.environ.get("GEN_NUM_PREDICT", "512"))
 # Force CPU if your GPU VRAM is low: set to 0. (You can also export OLLAMA_NUM_GPU=0)
 GEN_GPU_LAYERS = os.environ.get("GEN_GPU_LAYERS")  # None or int as string
 
@@ -239,11 +239,21 @@ def search_index(index: faiss.Index, q: np.ndarray, k: int):
 # Prompt + Generation
 # ==================
 def build_prompt(query: str, contexts: List[Dict[str, Any]], limit: int = 4000):
-    intro = "Answer the question using ONLY the information from the provided transcript excerpts. Provide a clear, direct answer without including chunk IDs, prefixes, or phrases like 'I would suggest' or 'the following answer'. Just provide the answer directly."
+    system_instruction = """You are a helpful and precise assistant. Your goal is to answer the user's question using ONLY the provided context snippets.
+    
+Guidelines:
+1. Read the context snippets carefully.
+2. Synthesize the information to answer the question.
+3. If the answer is not in the context, state that you cannot find the answer in the provided information.
+4. Do not make up information or use outside knowledge.
+5. Provide a clear, direct answer.
+"""
+    
     parts = []
     used = 0
-    intro_len = len(intro) + len(f"\n\nQuestion: {query}\n\nContext:\n") + len("\n\nAnswer:")
-    available = limit - intro_len - 200  # Reserve some space
+    # Reserve space for system instruction, query, and some buffer
+    base_len = len(system_instruction) + len(f"\n\nQuestion: {query}\n\nContext:\n") + len("\n\nAnswer:")
+    available = limit - base_len - 200
     
     for c in contexts:
         block = f"[chunk_id={c['chunk_id']}]\n{c['chunk']}\n"
@@ -259,7 +269,7 @@ def build_prompt(query: str, contexts: List[Dict[str, Any]], limit: int = 4000):
             truncated = first_chunk[:available-100] + "..."
             parts.append(f"[chunk_id={contexts[0]['chunk_id']}]\n{truncated}\n")
     
-    return f"{intro}\n\nQuestion: {query}\n\nContext:\n" + "\n---\n".join(parts) + "\n\nAnswer:"
+    return f"{system_instruction}\n\nQuestion: {query}\n\nContext:\n" + "\n---\n".join(parts) + "\n\nAnswer:"
 
 def _normalize_base_url(url: str) -> str:
     """

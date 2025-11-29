@@ -4,82 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAG System - Query Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container">
+        <header class="glass-header">
             <div class="header-content">
-                <div>
-                    <h1>🔍 RAG System Query Interface</h1>
-                    <p class="subtitle">Retrieval-Augmented Generation for Video/Audio Content</p>
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                    </div>
+                    <div>
+                        <h1>RAG System</h1>
+                        <p class="subtitle">Intelligent Video/Audio Analysis</p>
+                    </div>
                 </div>
                 <div class="auth-section" id="authSection">
                     <div class="user-info" id="userInfo" style="display: none;">
-                        <span id="usernameDisplay"></span>
-                        <button class="btn btn-small" id="chatHistoryBtn">Chat History</button>
-                        <button class="btn btn-small btn-secondary" id="logoutBtn">Logout</button>
+                        <span class="user-greeting"><i class="fa-regular fa-user"></i> <span id="usernameDisplay"></span></span>
+                        <button class="btn btn-glass btn-sm" id="chatHistoryBtn"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+                        <button class="btn btn-glass btn-sm btn-danger-glass" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
                     </div>
                     <div class="auth-buttons" id="authButtons">
-                        <button class="btn btn-small" id="loginBtn">Login</button>
-                        <button class="btn btn-small btn-secondary" id="registerBtn">Register</button>
+                        <button class="btn btn-glass btn-sm" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+                        <button class="btn btn-primary btn-sm" id="registerBtn"><i class="fa-solid fa-user-plus"></i> Register</button>
                     </div>
                 </div>
             </div>
         </header>
 
-        <div class="status-bar" id="statusBar">
+        <div class="status-bar glass-panel" id="statusBar">
             <div class="status-item">
-                <span class="status-label">Status:</span>
+                <span class="status-label"><i class="fa-solid fa-server"></i> System Status</span>
                 <span class="status-value" id="statusValue">Checking...</span>
             </div>
             <div class="status-item">
-                <span class="status-label">Chunks:</span>
+                <span class="status-label"><i class="fa-solid fa-database"></i> Indexed Chunks</span>
                 <span class="status-value" id="chunkCount">-</span>
             </div>
         </div>
 
         <main>
-            <div class="query-section">
+            <div class="query-section glass-panel">
                 <form id="queryForm">
                     <div class="form-group">
-                        <label for="queryInput">Enter your query:</label>
-                        <textarea 
-                            id="queryInput" 
-                            name="query" 
-                            rows="3" 
-                            placeholder="What would you like to know about the video/audio content?"
-                            required
-                        ></textarea>
+                        <label for="queryInput"><i class="fa-solid fa-message"></i> Your Query</label>
+                        <div class="input-wrapper">
+                            <textarea 
+                                id="queryInput" 
+                                name="query" 
+                                rows="3" 
+                                placeholder="Ask something about your video or audio content..."
+                                required
+                            ></textarea>
+                            <div class="focus-border"></div>
+                        </div>
                     </div>
                     
                     <div class="form-options">
                         <div class="form-group-inline">
-                            <label for="kInput">Top K results:</label>
+                            <label for="kInput" title="Number of chunks to retrieve">Top Results (K)</label>
                             <input type="number" id="kInput" name="k" value="4" min="1" max="20">
                         </div>
                         
-                        <div class="form-group-inline">
-                            <label>
+                        <div class="form-group-inline toggle-wrapper">
+                            <label class="toggle-switch">
                                 <input type="checkbox" id="generateAnswer" name="generate_answer" checked>
-                                Generate answer
+                                <span class="slider round"></span>
                             </label>
+                            <span class="toggle-label">Generate AI Answer</span>
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <span class="btn-text">Search</span>
-                        <span class="btn-loader" style="display: none;">⏳ Searching...</span>
+                    <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
+                        <span class="btn-text"><i class="fa-solid fa-paper-plane"></i> Search & Generate</span>
+                        <span class="btn-loader" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i> Processing...</span>
                     </button>
                 </form>
             </div>
 
             <div class="results-section" id="resultsSection" style="display: none;">
-                <div class="answer-section" id="answerSection">
+                <div class="answer-section glass-panel" id="answerSection">
                     <div class="answer-header">
-                        <h2>Answer</h2>
-                        <button class="copy-btn" id="copyAnswerBtn" title="Copy answer to clipboard">
-                            <span class="copy-icon">📋</span>
+                        <h2><i class="fa-solid fa-robot"></i> AI Answer</h2>
+                        <button class="btn btn-glass btn-sm copy-btn" id="copyAnswerBtn" title="Copy answer">
+                            <span class="copy-icon"><i class="fa-regular fa-copy"></i></span>
                             <span class="copy-text">Copy</span>
                         </button>
                     </div>
@@ -87,72 +106,73 @@
                 </div>
 
                 <div class="chunks-section">
-                    <h2>Relevant Answer</h2>
+                    <h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Source Context</h2>
                     <div class="chunks-list" id="chunksList"></div>
                 </div>
             </div>
 
-            <div class="error-section" id="errorSection" style="display: none;">
+            <div class="error-section glass-panel" id="errorSection" style="display: none;">
+                <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <div class="error-message" id="errorMessage"></div>
             </div>
         </main>
 
         <!-- Login Modal -->
-        <div class="modal" id="loginModal" style="display: none;">
-            <div class="modal-content">
+        <div class="modal" id="loginModal">
+            <div class="modal-content glass-modal">
                 <span class="close" id="closeLoginModal">&times;</span>
-                <h2>Login</h2>
+                <h2><i class="fa-solid fa-right-to-bracket"></i> Welcome Back</h2>
                 <form id="loginForm">
                     <div class="form-group">
                         <label for="loginUsername">Username</label>
-                        <input type="text" id="loginUsername" name="username" required>
+                        <input type="text" id="loginUsername" name="username" required placeholder="Enter your username">
                     </div>
                     <div class="form-group">
                         <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" required>
+                        <input type="password" id="loginPassword" name="password" required placeholder="Enter your password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
                 </form>
-                <div class="error-message" id="loginError" style="display: none;"></div>
+                <div class="error-message-box" id="loginError" style="display: none;"></div>
             </div>
         </div>
 
         <!-- Register Modal -->
-        <div class="modal" id="registerModal" style="display: none;">
-            <div class="modal-content">
+        <div class="modal" id="registerModal">
+            <div class="modal-content glass-modal">
                 <span class="close" id="closeRegisterModal">&times;</span>
-                <h2>Register</h2>
+                <h2><i class="fa-solid fa-user-plus"></i> Create Account</h2>
                 <form id="registerForm">
                     <div class="form-group">
                         <label for="registerUsername">Username</label>
-                        <input type="text" id="registerUsername" name="username" required>
+                        <input type="text" id="registerUsername" name="username" required placeholder="Choose a username">
                     </div>
                     <div class="form-group">
                         <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" name="email" required>
+                        <input type="email" id="registerEmail" name="email" required placeholder="Enter your email">
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" name="password" required>
+                        <input type="password" id="registerPassword" name="password" required placeholder="Choose a strong password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Register</button>
+                    <button type="submit" class="btn btn-primary btn-block">Register</button>
                 </form>
-                <div class="error-message" id="registerError" style="display: none;"></div>
+                <div class="error-message-box" id="registerError" style="display: none;"></div>
             </div>
         </div>
 
         <!-- Chat History Modal -->
-        <div class="modal" id="chatHistoryModal" style="display: none;">
-            <div class="modal-content modal-large">
+        <div class="modal" id="chatHistoryModal">
+            <div class="modal-content glass-modal modal-large">
                 <span class="close" id="closeChatHistoryModal">&times;</span>
-                <h2>Chat History</h2>
+                <h2><i class="fa-solid fa-clock-rotate-left"></i> Chat History</h2>
                 <div id="chatHistoryList" class="chat-history-list"></div>
             </div>
         </div>
 
-        <footer>
-            <button class="btn btn-secondary" id="rebuildBtn">Rebuild Index</button>
-            <p class="footer-text">RAG System v2.0.0</p>
+        <footer class="glass-footer">
+            <button class="btn btn-glass btn-sm" id="rebuildBtn"><i class="fa-solid fa-rotate"></i> Rebuild Index</button>
+            <p class="footer-text">RAG System v2.0.0 &copy; 2025</p>
         </footer>
     </div>
 
